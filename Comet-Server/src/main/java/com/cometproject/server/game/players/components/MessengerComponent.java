@@ -1,0 +1,219 @@
+package com.cometproject.server.game.players.components;
+
+import com.cometproject.server.game.achievements.types.AchievementType;
+import com.cometproject.server.game.players.PlayerManager;
+import com.cometproject.server.game.players.components.types.messenger.MessengerFriend;
+import com.cometproject.server.game.players.components.types.messenger.MessengerSearchResult;
+import com.cometproject.server.game.players.data.PlayerAvatar;
+import com.cometproject.server.game.players.types.Player;
+import com.cometproject.server.game.players.types.PlayerComponent;
+import com.cometproject.server.network.NetworkManager;
+import com.cometproject.server.network.messages.composers.MessageComposer;
+import com.cometproject.server.network.messages.outgoing.messenger.MessengerSearchResultsMessageComposer;
+import com.cometproject.server.network.messages.outgoing.messenger.UpdateFriendStateMessageComposer;
+import com.cometproject.server.network.sessions.Session;
+import com.cometproject.server.storage.queries.player.messenger.MessengerDao;
+import com.cometproject.server.storage.queries.player.messenger.MessengerSearchDao;
+import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
+
+import java.util.List;
+import java.util.Map;
+
+
+public class MessengerComponent implements PlayerComponent {
+    private Player player;
+
+    private Map<Integer, MessengerFriend> friends;
+
+    private List<Integer> requests;
+    private boolean initialised;
+
+    public MessengerComponent(Player player) {
+        this.player = player;
+
+        try {
+            this.friends = MessengerDao.getFriendsByPlayerId(player.getId());
+        } catch (Exception e) {
+            Logger.getLogger(MessengerComponent.class.getName()).error("Error while loading messenger friends", e);
+        }
+    }
+
+    public void dispose() {
+        this.sendStatus(false, false);
+
+        this.requests.clear();
+        this.friends.clear();
+        this.requests = null;
+        this.friends = null;
+        this.player = null;
+    }
+
+    public MessageComposer search(String query) {
+        List<MessengerSearchResult> currentFriends = Lists.newArrayList();
+        List<MessengerSearchResult> otherPeople = Lists.newArrayList();
+
+        try {
+            for (MessengerSearchResult searchResult : MessengerSearchDao.performSearch(query)) {
+                if (this.getFriendById(searchResult.getId()) != null) {
+                    currentFriends.add(searchResult);
+                } else {
+                    otherPeople.add(searchResult);
+                }
+            }
+        } catch (Exception e) {
+            player.getSession().getLogger().error("Error while searching for players", e);
+        }
+
+        return new MessengerSearchResultsMessageComposer(currentFriends, otherPeople);
+    }
+
+    public void addRequest(int playerId) {
+        this.getRequests().add(playerId);
+    }
+
+    public void addFriend(MessengerFriend friend) {
+        this.getFriends().put(friend.getUserId(), friend);
+
+        this.getPlayer().getAchievements().progressAchievement(AchievementType.FRIENDS_LIST, 1);
+    }
+
+    public void removeFriend(int userId) {
+        if (!this.friends.containsKey(userId)) {
+            return;
+        }
+
+        this.friends.remove(userId);
+
+        MessengerDao.deleteFriendship(this.player.getId(), userId);
+        this.player.getSession().send(new UpdateFriendStateMessageComposer(-1, userId));
+    }
+
+    public Integer getRequestBySender(int sender) {
+        for (Integer request : requests) {
+            if (request == sender) {
+                return request;
+            }
+        }
+
+        return null;
+    }
+
+    public void broadcast(MessageComposer msg) {
+        for (MessengerFriend friend : this.getFriends().values()) {
+            if (!friend.isOnline() || friend.getUserId() == this.getPlayer().getId()) {
+                continue;
+            }
+
+            Session session = NetworkManager.getInstance().getSessions().getByPlayerId(friend.getUserId());
+
+            if (session != null && session.getPlayer().getMessenger().isInitialised())
+                session.send(msg);
+        }
+    }
+
+    public void broadcast(List<Integer> friends, MessageComposer msg) {
+        for (int friendId : friends) {
+            if (friendId == this.player.getId() || !this.friends.containsKey(friendId) || !this.friends.get(friendId).isOnline()) {
+                continue;
+            }
+
+            MessengerFriend friend = this.friends.get(friendId);
+
+            if (!friend.isOnline() || friend.getUserId() == this.getPlayer().getId()) {
+                continue;
+            }
+
+            Session session = NetworkManager.getInstance().getSessions().getByPlayerId(friend.getUserId());
+
+            if (session != null && session.getPlayer() != null)
+                session.send(msg);
+        }
+    }
+
+    public boolean hasRequestFrom(int playerId) {
+        if (this.requests == null) return false;
+
+        for (Integer messengerRequest : this.requests) {
+            if (messengerRequest == playerId)
+                return true;
+        }
+
+        return false;
+    }
+
+    public List<PlayerAvatar> getRequestAvatars() {
+        List<PlayerAvatar> avatars = Lists.newArrayList();
+
+        if (this.requests == null) {
+            this.requests = MessengerDao.getRequestsByPlayerId(player.getId());
+        }
+
+        for (int playerId : this.requests) {
+            PlayerAvatar playerAvatar = PlayerManager.getInstance().getAvatarByPlayerId(playerId, PlayerAvatar.USERNAME_FIGURE);
+
+            if (playerAvatar != null) {
+                avatars.add(playerAvatar);
+            }
+        }
+
+        return avatars;
+    }
+
+    public void clearRequests() {
+        this.requests.clear();
+    }
+
+    public void sendOffline(int friend, boolean online, boolean inRoom) {
+        this.getPlayer().getSession().send(new UpdateFriendStateMessageComposer(PlayerManager.getInstance().getAvatarByPlayerId(friend, PlayerAvatar.USERNAME_FIGURE_MOTTO), online, inRoom, this.getPlayer().getRelationships().get(friend)));
+    }
+
+    public void sendStatus(boolean online, boolean inRoom) {
+        if (this.getPlayer() == null || this.getPlayer().getSettings() == null) {
+            return;
+        }
+
+        if (this.getPlayer().getSettings().getHideOnline()) {
+            return;
+        }
+
+        for (MessengerFriend friend : this.getFriends().values()) {
+            if (!friend.isOnline() || friend.getUserId() == this.getPlayer().getId()) {
+                continue;
+            }
+
+            Session session = NetworkManager.getInstance().getSessions().getByPlayerId(friend.getUserId());
+
+            if (session != null && session.getPlayer().getMessenger().isInitialised())
+                session.send(new UpdateFriendStateMessageComposer(this.getPlayer().getData(), online, inRoom, session.getPlayer().getRelationships().get(this.getPlayer().getId())));
+        }
+    }
+
+    public MessengerFriend getFriendById(int id) {
+        return this.getFriends().get(id);
+    }
+
+    public Map<Integer, MessengerFriend> getFriends() {
+        return this.friends;
+    }
+
+    public List<Integer> getRequests() {
+        return this.requests;
+    }
+
+    public Player getPlayer() {
+        return this.player;
+    }
+
+    public void removeRequest(Integer request) {
+        this.requests.remove(request);
+    }
+
+    public void setInitialised(boolean initialised) {
+        this.initialised = initialised;
+    }
+
+    public boolean isInitialised() {
+        return initialised;
+    }
+}

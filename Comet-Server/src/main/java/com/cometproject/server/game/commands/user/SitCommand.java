@@ -1,0 +1,59 @@
+package com.cometproject.server.game.commands.user;
+
+import com.cometproject.server.config.Locale;
+import com.cometproject.server.game.commands.ChatCommand;
+import com.cometproject.server.game.rooms.objects.entities.RoomEntityStatus;
+import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
+import com.cometproject.server.network.sessions.Session;
+
+
+public class SitCommand extends ChatCommand {
+    @Override
+    public void execute(Session client, String[] params) {
+        PlayerEntity playerEntity = client.getPlayer().getEntity();
+
+        if (!playerEntity.hasStatus(RoomEntityStatus.SIT)) {
+            double height = 0.5;
+
+            int rotation = playerEntity.getBodyRotation();
+
+            switch (rotation) {
+                case 1: {
+                    rotation++;
+                    break;
+                }
+                case 3: {
+                    rotation++;
+                    break;
+                }
+                case 5: {
+                    rotation++;
+                }
+            }
+
+            playerEntity.addStatus(RoomEntityStatus.SIT, String.valueOf(height));
+            playerEntity.setBodyRotation(rotation);
+            playerEntity.markNeedsUpdate();
+
+            isExecuted(client);
+        } else {
+            playerEntity.removeStatus(RoomEntityStatus.SIT);
+            playerEntity.markNeedsUpdate();
+        }
+    }
+
+    @Override
+    public String getPermission() {
+        return "sit_command";
+    }
+    
+    @Override
+    public String getParameter() {
+        return "";
+    }
+
+    @Override
+    public String getDescription() {
+        return Locale.get("command.sit.description");
+    }
+}
