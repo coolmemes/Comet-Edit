@@ -1,35 +1,27 @@
 package com.cometproject.server.game.rooms.types;
 
 import com.cometproject.api.game.rooms.IRoom;
-import com.cometproject.server.game.bots.BotData;
 import com.cometproject.server.game.groups.GroupManager;
 import com.cometproject.server.game.groups.types.Group;
-import com.cometproject.server.game.pets.data.PetData;
 import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.game.rooms.RoomQueue;
 import com.cometproject.server.game.rooms.models.CustomFloorMapData;
 import com.cometproject.server.game.rooms.models.RoomModel;
 import com.cometproject.server.game.rooms.models.types.DynamicRoomModel;
-import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
-import com.cometproject.server.game.rooms.objects.entities.types.PetEntity;
-import com.cometproject.server.game.rooms.objects.entities.types.data.PlayerBotData;
-import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
-import com.cometproject.server.game.rooms.objects.items.RoomItemWall;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerAtGivenTime;
 import com.cometproject.server.game.rooms.types.components.*;
 import com.cometproject.server.game.rooms.types.mapping.RoomMapping;
 import com.cometproject.server.network.messages.outgoing.room.polls.QuickPollMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.polls.QuickPollResultsMessageComposer;
-import com.cometproject.server.storage.cache.CacheManager;
-import com.cometproject.server.storage.cache.objects.RoomDataObject;
-import com.cometproject.server.storage.cache.objects.items.FloorItemDataObject;
-import com.cometproject.server.storage.cache.objects.items.WallItemDataObject;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.JsonFactory;
 import com.cometproject.server.utilities.attributes.Attributable;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -40,9 +32,6 @@ public class Room implements Attributable, IRoom {
     public final Logger log;
 
     private final RoomData data;
-
-    private final RoomDataObject cachedData;
-
     private RoomModel model;
     private RoomMapping mapping;
 
@@ -55,6 +44,7 @@ public class Room implements Attributable, IRoom {
     private PetComponent pets;
     private GameComponent game;
     private EntityComponent entities;
+    private FilterComponent filter;
     private Group group;
 
     private Map<String, Object> attributes;
@@ -66,18 +56,12 @@ public class Room implements Attributable, IRoom {
 
     private boolean isDisposed = false;
     private int idleTicks = 0;
-    private final AtomicInteger wiredTimer = new AtomicInteger(0);
 
-    private boolean isReloading = false;
+    private final AtomicInteger wiredTimer = new AtomicInteger(0);
 
     public Room(RoomData data) {
         this.data = data;
         this.log = Logger.getLogger("Room \"" + this.getData().getName() + "\"");
-        this.cachedData = null;
-    }
-
-    public Room(RoomDataObject cachedRoomObject) {
-        this(cachedRoomObject.getData());
     }
 
     public Room load() {
@@ -87,23 +71,17 @@ public class Room implements Attributable, IRoom {
             DynamicRoomModel dynamicRoomModel;
 
             if (this.getData().getHeightmap().startsWith("{")) {
-                CustomFloorMapData mapData = JsonUtil.getInstance().fromJson(this.getData().getHeightmap(), CustomFloorMapData.class);
+                CustomFloorMapData mapData = JsonFactory.getInstance().fromJson(this.getData().getHeightmap(), CustomFloorMapData.class);
 
-                dynamicRoomModel = DynamicRoomModel.create("dynamic_heightmap", mapData.getModelData(),
-                        mapData.getDoorX(), mapData.getDoorY(), mapData.getDoorRotation(),
-                        mapData.getWallHeight());
+                dynamicRoomModel = DynamicRoomModel.create("dynamic_heightmap", mapData.getModelData(), mapData.getDoorX(), mapData.getDoorY(), this.getModel().getDoorZ(), mapData.getDoorRotation(), mapData.getWallHeight());
             } else {
-                dynamicRoomModel = DynamicRoomModel.create("dynamic_heightmap", this.getData().getHeightmap(),
-                        this.getModel().getDoorX(), this.getModel().getDoorY(), this.getModel().getDoorRotation(), -1);
+                dynamicRoomModel = DynamicRoomModel.create("dynamic_heightmap", this.getData().getHeightmap(), this.getModel().getDoorX(), this.getModel().getDoorY(), this.getModel().getDoorZ(), this.getModel().getDoorRotation(), -1);
             }
 
             if (dynamicRoomModel != null) {
                 this.model = dynamicRoomModel;
             }
         }
-
-        // Cache the group.
-        this.group = GroupManager.getInstance().get(this.getData().getGroupId());
 
         this.attributes = new HashMap<>();
         this.ratings = new HashSet<>();
@@ -121,57 +99,19 @@ public class Room implements Attributable, IRoom {
         this.entities = new EntityComponent(this);
         this.bots = new RoomBotComponent(this);
         this.pets = new PetComponent(this);
+        this.filter = new FilterComponent(this);
+
+        // Cache the group.
+        this.group = GroupManager.getInstance().get(this.getData().getGroupId());
 
         this.setAttribute("loadTime", System.currentTimeMillis());
 
-        if (this.data.getType() == RoomType.PUBLIC) {
-            RoomQueue.getInstance().addQueue(this.getId(), 0);
-        }
+
+        RoomQueue.getInstance().addQueue(this.getId(), 0);
+
 
         this.log.debug("Room loaded");
         return this;
-    }
-
-    public RoomDataObject getCacheObject() {
-        final List<FloorItemDataObject> floorItems = new ArrayList<>();
-        final List<WallItemDataObject> wallItems = new ArrayList<>();
-        final List<Integer> rights = new ArrayList<>();
-        final List<PetData> petData = new ArrayList<>();
-        final List<BotData> botData = new ArrayList<>();
-
-        for (RoomItemFloor floorItem : this.getItems().getFloorItems().values()) {
-            if (floorItem != null) {
-                floorItems.add(new FloorItemDataObject(floorItem.getId(), floorItem.getItemId(),
-                        this.getId(), floorItem.getOwner(), floorItem.getOwnerName(), floorItem.getDataObject(),
-                        floorItem.getPosition(), floorItem.getRotation(), floorItem.getLimitedEditionItemData()));
-            }
-        }
-
-        for (RoomItemWall wallItem : this.getItems().getWallItems().values()) {
-            if (wallItem != null) {
-                wallItems.add(new WallItemDataObject(wallItem.getId(), wallItem.getItemId(),
-                        this.getId(), wallItem.getOwner(), wallItem.getOwnerName(), wallItem.getExtraData(),
-                        wallItem.getWallPosition(), wallItem.getLimitedEditionItemData()));
-            }
-        }
-
-        for (Integer roomRightsHolder : this.rights.getAll()) {
-            rights.add(roomRightsHolder);
-        }
-
-        for (PetEntity petEntity : this.getEntities().getPetEntities()) {
-            if (petEntity.getData() != null) {
-                petData.add(petEntity.getData());
-            }
-        }
-
-        for (BotEntity botEntity : this.getEntities().getBotEntities()) {
-            if (botEntity.getData() instanceof PlayerBotData) {
-                botData.add(botEntity.getData());
-            }
-        }
-
-        return new RoomDataObject(this.getId(), this.getData(), rights, floorItems, wallItems, petData, botData);
     }
 
     public boolean isIdle() {
@@ -188,16 +128,15 @@ public class Room implements Attributable, IRoom {
         return false;
     }
 
+    public void reloadItems() {
+        this.items = new ItemsComponent(this);
+    }
+
     private boolean forcedUnload = false;
 
     public void setIdleNow() {
         this.idleTicks = 600;
         this.forcedUnload = true;
-    }
-
-    public void reload() {
-        this.setIdleNow();
-        this.isReloading = true;
     }
 
     public void dispose() {
@@ -206,10 +145,6 @@ public class Room implements Attributable, IRoom {
         }
 
         long currentTime = System.currentTimeMillis();
-
-        if (CacheManager.getInstance().isEnabled()) {
-            CacheManager.getInstance().put("rooms." + this.getId(), this.getCacheObject());
-        }
 
         this.getItems().commit();
 
@@ -225,11 +160,11 @@ public class Room implements Attributable, IRoom {
         this.bots.dispose();
         this.mapping.dispose();
 
-        if (this.data.getType() == RoomType.PUBLIC) {
+        if(this.data.getType() == RoomType.PUBLIC) {
             RoomQueue.getInstance().removeQueue(this.getId());
         }
 
-        if (this.forcedUnload) {
+        if(this.forcedUnload) {
             RoomManager.getInstance().removeData(this.getId());
         }
 
@@ -243,7 +178,7 @@ public class Room implements Attributable, IRoom {
 
         long timeTaken = System.currentTimeMillis() - currentTime;
 
-        if (timeTaken >= 250) {
+        if(timeTaken >= 250) {
             this.log.warn("Room [" + this.getData().getId() + "][" + this.getData().getName() + "] took " + timeTaken + "ms to dispose");
         }
 
@@ -373,7 +308,7 @@ public class Room implements Attributable, IRoom {
     }
 
     public Group getGroup() {
-        if (this.group == null || this.group.getData() == null) return null;
+        if(this.group == null || this.group.getData() == null) return null;
 
         return this.group;
     }
@@ -406,15 +341,25 @@ public class Room implements Attributable, IRoom {
         return yesVotes;
     }
 
+    public FilterComponent getFilter() {
+        return filter;
+    }
+
     public String getQuestion() {
         return question;
     }
 
-    public RoomDataObject getCachedData() {
-        return cachedData;
+    public boolean hasGameRoom() {
+        return this.attributes.containsKey("automaticGame") && (boolean) this.attributes.get("automaticGame");
     }
 
-    public boolean isReloading() {
-        return this.isReloading;
+    public void setGameRoom(boolean enable) {
+        if (this.attributes.containsKey("automaticGame")) {
+            this.attributes.replace("automaticGame", enable);
+        } else {
+            this.attributes.put("automaticGame", enable);
+        }
     }
+
+
 }

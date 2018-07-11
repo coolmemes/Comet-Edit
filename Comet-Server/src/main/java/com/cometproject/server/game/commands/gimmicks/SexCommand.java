@@ -13,26 +13,15 @@ public class SexCommand extends ChatCommand {
 
     @Override
     public void execute(Session client, String[] params) {
-        if (params.length != 1) {
-            sendNotif(Locale.getOrDefault("command.user.invalid", "Invalid username!"), client);
-            return;
-        }
+        if (params.length != 1) return;
 
         String sexedPlayer = params[0];
 
         RoomEntity entity = client.getPlayer().getEntity().getRoom().getEntities().getEntityByName(sexedPlayer, RoomEntityType.PLAYER);
 
-        if (entity.getUsername() == client.getPlayer().getData().getUsername()) {
-            sendNotif(Locale.getOrDefault("command.sex.himself", "You can't sex yourself!"), client);
-            return;
-        }
-        
-        if (entity == null) {
-            sendNotif(Locale.getOrDefault("command.user.notinroom", "This user is not in a room."), client);
-            return;
-        }
+        if (entity == null) return;
 
-        client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(new WhisperMessageComposer(client.getPlayer().getEntity().getId(), "* " + client.getPlayer().getData().getUsername() + " sexed " + entity.getUsername() + " *", 34));
+        client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(new WhisperMessageComposer(client.getPlayer().getEntity().getId(), "* " + client.getPlayer().getData().getUsername() + " está teniendo sexo con " + entity.getUsername() + " *", 34));
         client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(new ActionMessageComposer(entity.getId(), 7));
     }
 
@@ -40,14 +29,14 @@ public class SexCommand extends ChatCommand {
     public String getPermission() {
         return "sex_command";
     }
-    
-    @Override
-    public String getParameter() {
-        return Locale.getOrDefault("command.parameter.username", "%username%");
-    }
 
     @Override
     public String getDescription() {
         return Locale.get("command.sex.description");
+    }
+
+    @Override
+    public boolean canDisable() {
+        return true;
     }
 }

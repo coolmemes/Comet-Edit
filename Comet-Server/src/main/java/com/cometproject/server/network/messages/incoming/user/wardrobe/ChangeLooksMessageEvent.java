@@ -40,7 +40,7 @@ public class ChangeLooksMessageEvent implements Event {
             client.getPlayer().setLastFigureUpdate((int) Comet.getTime());
         }
 
-        client.getPlayer().getAchievements().progressAchievement(AchievementType.AVATAR_LOOKS, 1);
+        client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_3, 1);
         client.getPlayer().getQuests().progressQuest(QuestType.PROFILE_CHANGE_LOOK);
         client.send(new AvatarAspectUpdateMessageComposer(figure, gender));
     }

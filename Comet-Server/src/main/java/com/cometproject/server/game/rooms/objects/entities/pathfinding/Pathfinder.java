@@ -4,6 +4,8 @@ import com.cometproject.server.game.rooms.objects.RoomObject;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.misc.Position;
+import com.cometproject.server.game.rooms.types.Room;
+import com.cometproject.server.game.rooms.types.mapping.RoomTile;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 
@@ -55,7 +57,6 @@ public abstract class Pathfinder {
         while (openList.size() > 0) {
             current = openList.pollFirst();
             current.setInClosed(true);
-
             for (int i = 0; i < (pathfinderMode == ALLOW_DIAGONAL ? diagonalMovePoints.length : movePoints.length); i++) {
                 tmp = current.getPosition().add((pathfinderMode == ALLOW_DIAGONAL ? diagonalMovePoints : movePoints)[i]);
                 final boolean isFinalMove = (tmp.getX() == end.getX() && tmp.getY() == end.getY());
@@ -64,9 +65,11 @@ public abstract class Pathfinder {
                     try {
                         if (map[tmp.getX()][tmp.getY()] == null) {
                             node = new PathfinderNode(tmp);
+
                             map[tmp.getX()][tmp.getY()] = node;
                         } else {
                             node = map[tmp.getX()][tmp.getY()];
+
                         }
                     } catch (ArrayIndexOutOfBoundsException e) {
                         continue;
@@ -77,10 +80,12 @@ public abstract class Pathfinder {
 
                         if (current.getPosition().getX() != node.getPosition().getX()) {
                             diff += 1;
+
                         }
 
                         if (current.getPosition().getY() != node.getPosition().getY()) {
                             diff += 1;
+
                         }
 
                         cost = current.getCost() + diff + node.getPosition().getDistanceSquared(end);
@@ -88,11 +93,12 @@ public abstract class Pathfinder {
                         if (cost < node.getCost()) {
                             node.setCost(cost);
                             node.setNextNode(current);
-                        }
 
+                        }
                         if (!node.isInOpen()) {
                             if (node.getPosition().getX() == finish.getPosition().getX() && node.getPosition().getY() == finish.getPosition().getY()) {
                                 node.setNextNode(current);
+
                                 return node;
                             }
 

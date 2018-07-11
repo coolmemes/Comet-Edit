@@ -28,11 +28,6 @@ public class RoomKickCommand extends ChatCommand {
     public String getPermission() {
         return "roomkick_command";
     }
-    
-    @Override
-    public String getParameter() {
-        return Locale.getOrDefault("command.parameter.message", "%message%");
-    }
 
     @Override
     public String getDescription() {

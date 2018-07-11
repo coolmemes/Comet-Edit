@@ -1,6 +1,5 @@
 package com.cometproject.server.game.catalog.purchase;
 
-import com.cometproject.api.game.players.data.components.inventory.PlayerItem;
 import com.cometproject.server.boot.Comet;
 import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.config.Locale;
@@ -19,18 +18,22 @@ import com.cometproject.server.game.items.rares.LimitedEditionItemData;
 import com.cometproject.server.game.items.types.ItemDefinition;
 import com.cometproject.server.game.pets.data.PetData;
 import com.cometproject.server.game.pets.data.StaticPetProperties;
+import com.cometproject.api.game.players.data.components.inventory.PlayerItem;
 import com.cometproject.server.game.players.components.types.inventory.InventoryBot;
 import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.game.rooms.bundles.RoomBundleManager;
 import com.cometproject.server.game.rooms.bundles.types.RoomBundle;
 import com.cometproject.server.game.rooms.bundles.types.RoomBundleItem;
+import com.cometproject.server.game.rooms.filter.FilterResult;
 import com.cometproject.server.network.NetworkManager;
 import com.cometproject.server.network.messages.outgoing.catalog.BoughtItemMessageComposer;
 import com.cometproject.server.network.messages.outgoing.catalog.GiftUserNotFoundMessageComposer;
+import com.cometproject.server.network.messages.outgoing.catalog.LimitedEditionSoldOutMessageComposer;
 import com.cometproject.server.network.messages.outgoing.catalog.UnseenItemsMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.*;
 import com.cometproject.server.network.messages.outgoing.room.engine.RoomForwardMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.settings.EnforceRoomCategoryMessageComposer;
+import com.cometproject.server.network.messages.outgoing.user.club.ClubStatusMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.inventory.BotInventoryMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.inventory.PetInventoryMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.inventory.UpdateInventoryMessageComposer;
@@ -43,7 +46,7 @@ import com.cometproject.server.storage.queries.items.TeleporterDao;
 import com.cometproject.server.storage.queries.pets.PetDao;
 import com.cometproject.server.storage.queries.player.PlayerDao;
 import com.cometproject.server.storage.queries.rooms.RoomItemDao;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.JsonFactory;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -65,7 +68,7 @@ public class OldCatalogPurchaseHandler {
 
     public void purchaseItem(Session client, int pageId, int itemId, String data, int amount, GiftData giftData) {
         if (CometSettings.asyncCatalogPurchase) {
-            if (this.executorService == null) {
+            if(this.executorService == null) {
                 this.executorService = Executors.newFixedThreadPool(2);
             }
 
@@ -101,7 +104,7 @@ public class OldCatalogPurchaseHandler {
                 client.send(new GiftUserNotFoundMessageComposer());
                 return;
             } else {
-                client.getPlayer().getAchievements().progressAchievement(AchievementType.GIFT_GIVER, 1);
+                client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_25, 1);
             }
         }
 
@@ -158,14 +161,6 @@ public class OldCatalogPurchaseHandler {
                 client.getPlayer().setLastGift((int) Comet.getTime());
             }
 
-            if (item.isBadgeOnly()) {
-
-                if (item.hasBadge() && client.getPlayer().getInventory().hasBadge(item.getBadgeId())) {
-                    client.send(new PurchaseErrorMessageComposer(1));
-                    client.send(new BoughtItemMessageComposer(BoughtItemMessageComposer.PurchaseType.BADGE));
-                    return;
-                }
-            }
 
             if (amount > 1 && !item.allowOffer()) {
                 client.send(new AlertMessageComposer(Locale.get("catalog.error.nooffer")));
@@ -176,10 +171,10 @@ public class OldCatalogPurchaseHandler {
             int totalCostCredits;
             int totalCostPoints;
             int totalCostActivityPoints;
+            int totalCostSeasonalPoints;
 
             if (item.getLimitedSells() >= item.getLimitedTotal() && item.getLimitedTotal() != 0) {
-//                client.send(new LimitedEditionSoldOutMessageComposer());
-                // TODO: Fix this.
+                client.send(new LimitedEditionSoldOutMessageComposer());
                 return;
             }
 
@@ -197,10 +192,12 @@ public class OldCatalogPurchaseHandler {
                 totalCostCredits = amount > 1 ? ((item.getCostCredits() * amount) - ((int) Math.floor((double) amount / 6) * item.getCostCredits())) : item.getCostCredits();
                 totalCostPoints = amount > 1 ? ((item.getCostOther() * amount) - ((int) Math.floor((double) amount / 6) * item.getCostOther())) : item.getCostOther();
                 totalCostActivityPoints = amount > 1 ? ((item.getCostActivityPoints() * amount) - ((int) Math.floor((double) amount / 6) * item.getCostActivityPoints())) : item.getCostActivityPoints();
+                totalCostSeasonalPoints = amount > 1 ? ((item.getCostSeasonal() * amount) - ((int) Math.floor((double) amount / 6) * item.getCostSeasonal())) : item.getCostSeasonal();
             } else {
                 totalCostCredits = item.getCostCredits();
                 totalCostPoints = item.getCostOther();
                 totalCostActivityPoints = item.getCostActivityPoints();
+                totalCostSeasonalPoints = item.getCostSeasonal();
             }
 
             if ((!CometSettings.playerInfiniteBalance && (client.getPlayer().getData().getCredits() < totalCostCredits || client.getPlayer().getData().getActivityPoints() < totalCostActivityPoints)) || client.getPlayer().getData().getVipPoints() < totalCostPoints) {
@@ -209,17 +206,13 @@ public class OldCatalogPurchaseHandler {
                 return;
             }
 
-            if(item.getLimitedTotal() > 0) {
-                item.increaseLimitedSells(amount);
-                CatalogDao.updateLimitSellsForItem(item.getId(), amount);
-            }
-
             if (!CometSettings.playerInfiniteBalance) {
                 client.getPlayer().getData().decreaseCredits(totalCostCredits);
                 client.getPlayer().getData().decreaseActivityPoints(totalCostActivityPoints);
             }
 
             client.getPlayer().getData().decreasePoints(totalCostPoints);
+            client.getPlayer().getData().decreaseSeasonalPoints(totalCostSeasonalPoints);
 
             client.getPlayer().sendBalance();
             client.getPlayer().getData().save();
@@ -257,13 +250,50 @@ public class OldCatalogPurchaseHandler {
             }
 
             if (item.isBadgeOnly()) {
-
-                if (item.hasBadge() && !client.getPlayer().getInventory().hasBadge(item.getBadgeId())) {
+                if (item.hasBadge()) {
                     client.getPlayer().getInventory().addBadge(item.getBadgeId(), true);
                 }
 
-                client.send(new BoughtItemMessageComposer(BoughtItemMessageComposer.PurchaseType.BADGE));
-                return;
+                if (item.getDisplayName().startsWith("color")) {
+                    if (item.hasBadge()) {
+                        client.getPlayer().getData().setNameColorCode(item.getDisplayName().split("_")[1]);
+                        client.getPlayer().getData().saveCustomization();
+                        client.send(new BoughtItemMessageComposer(BoughtItemMessageComposer.PurchaseType.BADGE));
+                        client.send(new NotificationMessageComposer(Locale.getOrDefault("catalog.customisation.icon", "multi_whisper"), Locale.getOrDefault("catalog.color.purchased", "You purchased successfully the color!")));
+                        return;
+                    }
+                }
+
+                if (item.getDisplayName().startsWith("alt")) {
+                    if (item.hasBadge()) {
+                        client.getPlayer().getData().setNameAltCode(item.getDisplayName().split("_")[1]);
+                        client.getPlayer().getData().saveCustomization();
+                        client.send(new BoughtItemMessageComposer(BoughtItemMessageComposer.PurchaseType.BADGE));
+                        client.send(new NotificationMessageComposer(Locale.getOrDefault("catalog.customisation.icon", "multi_whisper"), Locale.getOrDefault("catalog.altcode.purchased", "You purchased successfully the ALT code!")));
+                        return;
+                    }
+                }
+
+                if (item.getDisplayName().toLowerCase().startsWith("deal")) {
+                    int days;
+                    String[] type = item.getDisplayName().split("_");
+
+                    switch (type[2]) {
+                        case "1":
+                            days = 31;
+                            client.getPlayer().getSubscription().add(days);
+                            break;
+                        case "2":
+                            days = 31 * 3;
+                            client.getPlayer().getSubscription().add(days);
+                            break;
+                    }
+
+                    client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_107, 1);
+                    client.send(new ClubStatusMessageComposer(client.getPlayer().getSubscription()));
+                    client.send(new BoughtItemMessageComposer(BoughtItemMessageComposer.PurchaseType.BADGE));
+                    return;
+                }
             }
 
             for (CatalogBundledItem bundledItem : item.getItems()) {
@@ -274,12 +304,6 @@ public class OldCatalogPurchaseHandler {
                 }
 
                 client.send(new BoughtItemMessageComposer(item, def));
-
-                if (def.getItemName().equals("DEAL_HC_1")) {
-                    // TODO: HC buying
-                    throw new Exception("HC purchasing is not implemented");
-                }
-
                 String extraData = "";
 
                 boolean isTeleport = false;
@@ -300,8 +324,8 @@ public class OldCatalogPurchaseHandler {
 
                     int petId = PetDao.createPet(client.getPlayer().getId(), petData[0], Integer.parseInt(petRace), Integer.parseInt(petData[1]), petData[2]);
 
-                    client.getPlayer().getAchievements().progressAchievement(AchievementType.PET_LOVER, 1);
-                    client.getPlayer().getPets().addPet(new PetData(petId, petData[0], 0, StaticPetProperties.DEFAULT_LEVEL, StaticPetProperties.DEFAULT_HAPPINESS, StaticPetProperties.DEFAULT_EXPERIENCE, StaticPetProperties.DEFAULT_ENERGY, client.getPlayer().getId(), client.getPlayer().getData().getUsername(), petData[2], Integer.parseInt(petData[1]), Integer.parseInt(petRace)));
+                    client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_36, 1);
+                    client.getPlayer().getPets().addPet(new PetData(petId, petData[0], 0, StaticPetProperties.DEFAULT_LEVEL, StaticPetProperties.DEFAULT_HAPPINESS, StaticPetProperties.DEFAULT_EXPERIENCE, StaticPetProperties.DEFAULT_ENERGY, client.getPlayer().getId(), petData[2], Integer.parseInt(petData[1]), Integer.parseInt(petRace)));
                     client.send(new PetInventoryMessageComposer(client.getPlayer().getPets().getPets()));
 
                     client.send(new UnseenItemsMessageComposer(new HashMap<Integer, List<Integer>>() {{
@@ -312,6 +336,8 @@ public class OldCatalogPurchaseHandler {
                     amount = 20; // we want 20 stickies
 
                     extraData = "";
+                } else if (def.isAdFurni()) {
+                    extraData = "state\t0\timageUrl\timage\toffsetX\t0\toffsetY\t0\toffsetZ\t0";
                 } else if (def.isRoomDecor()) {
                     if (data.isEmpty()) {
                         extraData += "0";
@@ -328,18 +354,20 @@ public class OldCatalogPurchaseHandler {
                     extraData = data;
                 } else if (def.getType().equals("r")) {
                     // It's a bot!
-                    String botName = "New Bot";
+                    String botName = Locale.getOrDefault("catalog.bot.default_name.generic", "Robbie");
                     String botFigure = item.getPresetData();
                     String botGender = "m";
-                    String botMotto = "Beeb beeb boop beep!";
+                    String botMotto = Locale.getOrDefault("catalog.bot.default_motto", "Beep beep boop beep!");
                     String type = "generic";
 
                     switch (item.getDisplayName()) {
                         case "bot_bartender":
+                            botName = Locale.getOrDefault("catalog.bot.default_name.bartender", "Alberta");
                             type = "waiter";
                             break;
 
                         case "bot_spy":
+                            botName = Locale.getOrDefault("catalog.bot.default_name.spy", "Belle");
                             type = "spy";
                             break;
                     }
@@ -414,9 +442,7 @@ public class OldCatalogPurchaseHandler {
                 if (giftData != null) {
                     giftData.setExtraData(extraData);
 
-                    ItemDefinition itemDefinition = ItemManager.getInstance().getBySpriteId(giftData.getSpriteId());
-
-                    purchases.add(new CatalogPurchase(playerIdToDeliver, itemDefinition == null ? CatalogManager.getInstance().getGiftBoxesOld().get(0) : itemDefinition.getId(), "GIFT::##" + JsonUtil.getInstance().toJson(giftData)));
+                    purchases.add(new CatalogPurchase(playerIdToDeliver, ItemManager.getInstance().getBySpriteId(giftData.getSpriteId()).getId(), "GIFT::##" + JsonFactory.getInstance().toJson(giftData)));
                 } else {
                     for (int purchaseCount = 0; purchaseCount < amount; purchaseCount++) {
                         for (int itemCount = 0; itemCount != bundledItem.getAmount(); itemCount++) {
@@ -429,6 +455,9 @@ public class OldCatalogPurchaseHandler {
 
                 for (long newItem : newItems) {
                     if (item.getLimitedTotal() > 0) {
+                        item.increaseLimitedSells(1);
+                        CatalogDao.updateLimitSellsForItem(item.getId());
+
                         LimitedEditionDao.save(new LimitedEditionItemData(newItem, item.getLimitedSells(), item.getLimitedTotal()));
                     }
 
@@ -465,13 +494,8 @@ public class OldCatalogPurchaseHandler {
 
                     client.send(new UnseenItemsMessageComposer(unseenItems));
                     client.send(new UpdateInventoryMessageComposer());
-
-                    if (CometSettings.logCatalogPurchases) {
-                        CatalogDao.saveRecentPurchase(client.getPlayer().getId(), item.getId(), amount, extraData);
-                    }
-
-                    client.getPlayer().getRecentPurchases().add(item);
                 }
+
             }
         } catch (Exception e) {
             log.error("Error while buying catalog item", e);
@@ -497,12 +521,12 @@ public class OldCatalogPurchaseHandler {
             if (client.getPlayer() != null) {
                 if (client.getPlayer().getInventory() != null) {
                     for (long newItem : newItems) {
-                        unseenItems.add(client.getPlayer().getInventory().add(newItem, ItemManager.getInstance().getBySpriteId(giftData.getSpriteId()).getId(), "GIFT::##" + JsonUtil.getInstance().toJson(giftData), giftData, null));
+                        unseenItems.add(client.getPlayer().getInventory().add(newItem, ItemManager.getInstance().getBySpriteId(giftData.getSpriteId()).getId(), "GIFT::##" + JsonFactory.getInstance().toJson(giftData), giftData, null));
                     }
                 }
 
                 if (client.getPlayer().getAchievements() != null) {
-                    client.getPlayer().getAchievements().progressAchievement(AchievementType.GIFT_RECEIVER, 1);
+                    client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_26, 1);
                 }
             }
 
@@ -513,4 +537,63 @@ public class OldCatalogPurchaseHandler {
         }
     }
 
+    /**
+     * Catalog purchase object used for batching multiple purchases together
+     */
+    public class CatalogPurchase {
+        /**
+         * The ID of the player who purchased the item
+         */
+        private int playerId;
+
+        /**
+         * The item definition ID of the item
+         */
+        private int itemBaseId;
+
+        /**
+         * The data generated for items such as trophies etc
+         */
+        private String data;
+
+        /**
+         * Initialize the catalog purchase object
+         *
+         * @param playerId   The ID of the player who purchased the item
+         * @param itemBaseId The item definition ID of the item
+         * @param data       The data generated for items such as trophies etc
+         */
+        public CatalogPurchase(int playerId, int itemBaseId, String data) {
+            this.playerId = playerId;
+            this.itemBaseId = itemBaseId;
+            this.data = data;
+        }
+
+        /**
+         * Get the player ID of the player who purchased the item
+         *
+         * @return The ID of the player who purchased the item
+         */
+        public int getPlayerId() {
+            return playerId;
+        }
+
+        /**
+         * Get the item definition ID
+         *
+         * @return The item definition ID
+         */
+        public int getItemBaseId() {
+            return itemBaseId;
+        }
+
+        /**
+         * Get the data generated for items such as trophies etc
+         *
+         * @return The data generated for items such as trophies etc
+         */
+        public String getData() {
+            return data;
+        }
+    }
 }

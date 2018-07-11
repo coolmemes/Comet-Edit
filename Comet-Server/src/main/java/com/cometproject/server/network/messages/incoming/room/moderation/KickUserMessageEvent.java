@@ -4,6 +4,7 @@ import com.cometproject.api.game.rooms.settings.RoomKickState;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.incoming.Event;
+import com.cometproject.server.network.messages.outgoing.room.alerts.RoomConnectionErrorMessageComposer;
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.network.sessions.Session;
 
@@ -29,10 +30,11 @@ public class KickUserMessageEvent implements Event {
         }
 
 
-        if (room.getData().getOwnerId() == playerEntity.getPlayerId() || !playerEntity.getPlayer().getPermissions().getRank().roomKickable()) {
+        if (playerEntity.getPlayer().getData().getRank() > client.getPlayer().getData().getRank() || room.getData().getOwnerId() == playerEntity.getPlayerId() || !playerEntity.getPlayer().getPermissions().getRank().roomKickable()) {
             return;
         }
 
         playerEntity.kick();
+        playerEntity.getPlayer().getSession().send(new RoomConnectionErrorMessageComposer(2, ""));
     }
 }

@@ -5,14 +5,14 @@ import com.cometproject.server.game.permissions.types.OverrideCommandPermission;
 import com.cometproject.server.game.permissions.types.Perk;
 import com.cometproject.server.game.permissions.types.Rank;
 import com.cometproject.server.storage.queries.permissions.PermissionsDao;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import org.apache.log4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
 
 
-public class PermissionsManager implements Initialisable {
+public class PermissionsManager implements Initializable {
     private static PermissionsManager permissionsManagerInstance;
 
     private Map<Integer, Perk> perks;
@@ -74,7 +74,7 @@ public class PermissionsManager implements Initialisable {
             }
 
             this.ranks = PermissionsDao.getRankPermissions();
-            this.ranks.put(255, new Rank(255, "Comet", true, 0, false, true, false, false, true, true, true, false, true, true, true, true, true, 10000, true, true));
+            //this.ranks.put(255, new Rank(255, "Comet", true, "AB7CE0", true, 0, false, true, false, false, true, true, true, false, true, true, true, true, true, true, 10000, true, true));
         } catch (Exception e) {
             log.error("Error while loading rank permissions", e);
             return;

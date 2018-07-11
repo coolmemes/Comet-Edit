@@ -1,21 +1,23 @@
 package com.cometproject.server.game.items;
 
+import com.cometproject.server.game.items.crackable.CrackableItem;
+import com.cometproject.server.game.items.crafting.CraftingMachine;
 import com.cometproject.server.game.items.music.MusicData;
 import com.cometproject.server.game.items.types.ItemDefinition;
-import com.cometproject.server.storage.queries.items.ItemDao;
-import com.cometproject.server.storage.queries.items.MusicDao;
-import com.cometproject.server.storage.queries.items.TeleporterDao;
+import com.cometproject.server.storage.queries.items.*;
 import com.cometproject.server.storage.queries.rooms.RoomItemDao;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import org.apache.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-public class ItemManager implements Initialisable {
+public class ItemManager implements Initializable {
     private static ItemManager itemManagerInstance;
 
     private Logger log = Logger.getLogger(ItemManager.class.getName());
@@ -25,8 +27,10 @@ public class ItemManager implements Initialisable {
     private Map<Integer, Integer> itemSpriteIdToDefinitionId;
     private Map<Integer, MusicData> musicData;
 
+    private Map<Integer, CrackableItem> crackableRewards;
     private Map<Long, Integer> itemIdToVirtualId;
     private Map<Integer, Long> virtualIdToItemId;
+    private List<CraftingMachine> craftingMachines;
 
     private AtomicInteger itemIdCounter;
     private Integer saddleId;
@@ -39,6 +43,8 @@ public class ItemManager implements Initialisable {
     public void initialize() {
         this.itemDefinitions = new HashMap<>();
         this.musicData = new HashMap<>();
+        this.crackableRewards = new HashMap<>();
+        this.craftingMachines = new ArrayList<CraftingMachine>();
 
         this.itemIdToVirtualId = new ConcurrentHashMap<>();
         this.virtualIdToItemId = new ConcurrentHashMap<>();
@@ -47,6 +53,8 @@ public class ItemManager implements Initialisable {
 
         this.loadItemDefinitions();
         this.loadMusicData();
+        this.loadCrackableRewards();
+        this.loadCraftingMachines();
 
         log.info("ItemManager initialized");
     }
@@ -110,6 +118,35 @@ public class ItemManager implements Initialisable {
         return virtualId;
     }
 
+    public void loadCrackableRewards() {
+        if(!this.crackableRewards.isEmpty()) {
+            this.crackableRewards.clear();
+        }
+
+        for(CrackableItem crackable : CrackableDao.getCrackableRewards()){
+            this.crackableRewards.put(crackable.getItemId(), crackable);
+        }
+
+        log.info("Loaded " + this.crackableRewards.size() + " crackable rewards");
+    }
+
+    public void loadCraftingMachines() {
+        if(!this.craftingMachines.isEmpty()) {
+            this.craftingMachines.clear();
+        }
+
+        for(ItemDefinition item : this.itemDefinitions.values()) {
+            if(item.getInteraction().equals("crafting")) {
+                CraftingMachine machine = new CraftingMachine(item.getId());
+                CraftingDao.loadAllowedItems(machine);
+                CraftingDao.loadRecipes(machine);
+                this.craftingMachines.add(machine);
+                machine = null;
+            }
+        }
+    }
+
+
     public void disposeItemVirtualId(long itemId) {
         int virtualId = this.getItemVirtualId(itemId);
 
@@ -155,12 +192,36 @@ public class ItemManager implements Initialisable {
         return null;
     }
 
+    public CrackableItem getCrackableRewards(int crackableId) {
+        CrackableItem crI = null;
+
+        if(this.crackableRewards.containsKey(crackableId)) {
+            crI = this.crackableRewards.get(crackableId);
+        }
+
+        return crI;
+    }
+
+
+    public CraftingMachine getCraftingMachine(int itemId) {
+        final CraftingMachine[] machine = {null};
+        for(CraftingMachine machineX : this.craftingMachines){
+            if(machineX.getBaseId() == itemId) { machine[0] = machineX; }
+        }
+
+        return machine[0];
+    }
+
     public Map<Long, Integer> getItemIdToVirtualIds() {
         return itemIdToVirtualId;
     }
 
     public ItemDefinition getBySpriteId(int spriteId) {
         return this.itemDefinitions.get(this.itemSpriteIdToDefinitionId.get(spriteId));
+    }
+
+    public ItemDefinition getByBaseId(int baseId) {
+        return this.itemDefinitions.get(baseId);
     }
 
     public Logger getLogger() {

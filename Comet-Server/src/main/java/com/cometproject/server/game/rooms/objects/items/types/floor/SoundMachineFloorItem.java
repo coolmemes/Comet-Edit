@@ -11,7 +11,7 @@ import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.network.messages.outgoing.music.PlayMusicMessageComposer;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.JsonFactory;
 import com.cometproject.server.utilities.attributes.Stateable;
 import com.google.gson.reflect.TypeToken;
 
@@ -29,20 +29,20 @@ public class SoundMachineFloorItem extends RoomItemFloor implements Stateable {
 
     private boolean pendingPlay = false;
 
-    public SoundMachineFloorItem(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public SoundMachineFloorItem(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
 
         if (data.startsWith("##jukeboxOn[")) {
-            this.songs = JsonUtil.getInstance().fromJson(data.replace("##jukeboxOn", ""), new TypeToken<ArrayList<SongItemData>>() {
+            this.songs = JsonFactory.getInstance().fromJson(data.replace("##jukeboxOn", ""), new TypeToken<ArrayList<SongItemData>>() {
             }.getType());
 
             this.pendingPlay = true;
             this.setTicks(RoomItemFactory.getProcessTime(1.5));
         } else if (data.startsWith("##jukeboxOff[")) {
-            this.songs = JsonUtil.getInstance().fromJson(data.replace("##jukeboxOff", ""), new TypeToken<ArrayList<SongItemData>>() {
+            this.songs = JsonFactory.getInstance().fromJson(data.replace("##jukeboxOff", ""), new TypeToken<ArrayList<SongItemData>>() {
             }.getType());
         } else if (data.startsWith("[")) {
-            this.songs = JsonUtil.getInstance().fromJson(data, new TypeToken<ArrayList<SongItemData>>() {
+            this.songs = JsonFactory.getInstance().fromJson(data, new TypeToken<ArrayList<SongItemData>>() {
             }.getType());
         } else {
             this.songs = new ArrayList<>();
@@ -222,7 +222,7 @@ public class SoundMachineFloorItem extends RoomItemFloor implements Stateable {
 
     @Override
     public String getDataObject() {
-        return (this.isPlaying ? "##jukeboxOn" : "##jukeboxOff") + JsonUtil.getInstance().toJson(this.songs);
+        return (this.isPlaying ? "##jukeboxOn" : "##jukeboxOff") + JsonFactory.getInstance().toJson(this.songs);
     }
 
     @Override

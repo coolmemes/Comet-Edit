@@ -3,7 +3,6 @@ package com.cometproject.server.network.messages.incoming.room.action;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntityStatus;
 import com.cometproject.server.game.rooms.objects.entities.pathfinding.Square;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
-import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.network.sessions.Session;
@@ -19,6 +18,7 @@ public class WalkMessageEvent implements Event {
 
         try {
             if (client.getPlayer().getEntity() == null || client.getPlayer().getEntity().hasAttribute("warp")) {
+                // User not in room!
                 return;
             }
 
@@ -33,8 +33,6 @@ public class WalkMessageEvent implements Event {
             if (entity.hasAttribute("teleport")) {
                 List<Square> squares = new LinkedList<>();
                 squares.add(new Square(goalX, goalY));
-                
-                entity.unIdle();
 
                 if (entity.getMountedEntity() != null) {
                     entity.getMountedEntity().setWalkingPath(squares);
@@ -46,16 +44,15 @@ public class WalkMessageEvent implements Event {
                 return;
             }
 
-//
-//            if(entity.hasStatus(RoomEntityStatus.MOVE)) {
-//                // we're moving
-//                entity.setPendingWalk(new Position(goalX, goalY));
-//                return;
-//            }
-
             if (entity.canWalk() && !entity.isOverriden() && entity.isVisible()) {
                 entity.moveTo(goalX, goalY);
             }
+
+            if(entity.hasStatus(RoomEntityStatus.DEVELOPER)) {
+                entity.getPosition().setYDev(goalY);
+                entity.getPosition().setXDev(goalX);
+            }
+
         } catch (Exception e) {
             client.getLogger().error("Error while finding path", e);
         }

@@ -7,14 +7,12 @@ import com.cometproject.server.boot.Comet;
 import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.achievements.types.AchievementType;
-import com.cometproject.server.game.bots.BotMode;
-import com.cometproject.server.game.bots.BotType;
 import com.cometproject.server.game.commands.CommandManager;
 import com.cometproject.server.game.commands.vip.TransformCommand;
 import com.cometproject.server.game.groups.GroupManager;
 import com.cometproject.server.game.groups.types.Group;
 import com.cometproject.server.game.moderation.BanManager;
-import com.cometproject.server.game.players.PlayerManager;
+import com.cometproject.server.game.moderation.types.BanType;
 import com.cometproject.server.game.players.data.PlayerData;
 import com.cometproject.server.game.players.types.Player;
 import com.cometproject.server.game.quests.types.QuestType;
@@ -23,8 +21,9 @@ import com.cometproject.server.game.rooms.RoomQueue;
 import com.cometproject.server.game.rooms.objects.entities.PlayerEntityAccess;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntityStatus;
-import com.cometproject.server.game.rooms.objects.entities.types.ai.bots.WaiterAI;
+import com.cometproject.server.game.rooms.objects.entities.effects.PlayerEffect;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.triggers.WiredTriggerUserLeft;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerPlayerSaysKeyword;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
@@ -34,10 +33,13 @@ import com.cometproject.server.logging.LogManager;
 import com.cometproject.server.logging.entries.RoomVisitLogEntry;
 import com.cometproject.server.network.NetworkManager;
 import com.cometproject.server.network.messages.incoming.room.engine.InitializeRoomMessageEvent;
+import com.cometproject.server.network.messages.outgoing.notification.SimpleAlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.access.DoorbellRequestComposer;
+import com.cometproject.server.network.messages.outgoing.user.details.UserNameChangeMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.access.RoomReadyMessageComposer;
-import com.cometproject.server.network.messages.outgoing.room.alerts.CantConnectMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.alerts.DoorbellNoAnswerComposer;
+import com.cometproject.server.network.messages.outgoing.room.alerts.GenericErrorMessageComposer;
+import com.cometproject.server.network.messages.outgoing.room.alerts.RoomConnectionErrorMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.alerts.RoomErrorMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.AvatarsMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.IdleStatusMessageComposer;
@@ -54,16 +56,13 @@ import com.cometproject.server.network.messages.outgoing.room.permissions.YouAre
 import com.cometproject.server.network.messages.outgoing.room.permissions.YouAreSpectatorMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.queue.RoomQueueStatusMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.settings.RoomRatingMessageComposer;
-import com.cometproject.server.network.messages.outgoing.user.inventory.PetInventoryMessageComposer;
 import com.cometproject.server.network.sessions.Session;
-import com.cometproject.server.storage.queries.pets.RoomPetDao;
 import com.cometproject.server.utilities.attributes.Attributable;
 import org.apache.log4j.Logger;
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.HashMap;
 import java.util.Map;
-
 
 public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attributable, PlayerRoomEntity {
     private static final Logger log = Logger.getLogger(PlayerEntity.class.getName());
@@ -108,8 +107,8 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
     }
 
     @Override
-    public boolean joinRoom(Room room, String password) {
-        if (this.isFinalized()) return this.getRoom().getId() == room.getId();
+    public void joinRoom(Room room, String password) {
+        if (this.isFinalized()) return;
 
         boolean isAuthFailed = false;
         boolean isSpectating = this.getPlayer().isSpectating(room.getId());
@@ -128,23 +127,24 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
 
                 this.isQueueing = true;
                 this.getPlayer().getSession().send(new RoomQueueStatusMessageComposer(RoomQueue.getInstance().getQueueCount(room.getId(), this.playerId)));
-                return false;
+                return;
             }
+            this.getPlayer().getSession().send(new RoomErrorMessageComposer(1));
 
-            this.getPlayer().getSession().send(new CantConnectMessageComposer(1));
             this.getPlayer().getSession().send(new HotelViewMessageComposer());
             isAuthFailed = true;
         }
 
         // Room bans
         if (!isAuthFailed && this.getRoom().getRights().hasBan(this.getPlayerId()) && this.getPlayer().getPermissions().getRank().roomKickable()) {
-            this.getPlayer().getSession().send(new CantConnectMessageComposer(4));
+            this.getPlayer().getSession().send(new RoomErrorMessageComposer(4));
             isAuthFailed = true;
         }
 
         boolean isOwner = (this.getRoom().getData().getOwnerId() == this.getPlayerId());
         boolean isTeleporting = this.getPlayer().isTeleporting() && (this.getPlayer().getTeleportRoomId() == this.getRoom().getId());
-        boolean isDoorbell = false;
+
+        this.getPlayer().getSession().send(new OpenConnectionMessageComposer());
 
         if (!isAuthFailed && !this.getPlayer().isBypassingRoomAuth() && (!isOwner && !this.getPlayer().getPermissions().getRank().roomEnterLocked() && !this.isDoorbellAnswered()) && !isTeleporting) {
             if (this.getRoom().getData().getAccess() == RoomAccessType.PASSWORD) {
@@ -157,7 +157,7 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
                 }
 
                 if (!matched) {
-                    this.getPlayer().getSession().send(new RoomErrorMessageComposer(-100002));
+                    this.getPlayer().getSession().send(new GenericErrorMessageComposer(-100002));
                     this.getPlayer().getSession().send(new HotelViewMessageComposer());
                     isAuthFailed = true;
                 }
@@ -172,7 +172,6 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
                         this.getRoom().getEntities().broadcastMessage(new DoorbellRequestComposer(this.getUsername()), true);
                         this.getPlayer().getSession().send(new DoorbellRequestComposer(""));
                         isAuthFailed = true;
-                        isDoorbell = true;
                     }
                 }
             }
@@ -185,15 +184,11 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
         this.getPlayer().setRoomQueueId(0);
 
         if (isAuthFailed) {
-            return isDoorbell;
+            return;
         }
-
-        this.getPlayer().getSession().send(new OpenConnectionMessageComposer());
 
         this.getRoom().getEntities().addEntity(this);
         this.finalizeJoinRoom();
-
-        return true;
     }
 
     @Override
@@ -242,7 +237,7 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
             this.updateVisibility(false);
         }
 
-        session.send(new RoomRatingMessageComposer(this.getRoom().getData().getScore(), this.canRateRoom()));
+        session.send(new RoomRatingMessageComposer(this.getRoom().getData().getScore(), (this.getPlayer().getId() == this.getRoom().getData().getOwnerId()) ? false : this.canRateRoom()));
 
         InitializeRoomMessageEvent.heightmapMessageEvent.handle(session, null);
 
@@ -257,7 +252,7 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
 
         this.isFinalized = true;
         this.getPlayer().setSpectatorRoomId(0);
-        this.getPlayer().getAchievements().progressAchievement(AchievementType.ROOM_ENTRY, 1);
+        this.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_48, 1);
     }
 
     public boolean canRateRoom() {
@@ -336,27 +331,12 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
         if (this.hasPlacedPet && this.getRoom().getData().getOwnerId() != this.playerId) {
             for (PetEntity petEntity : this.getRoom().getEntities().getPetEntities()) {
                 if (petEntity.getData().getOwnerId() == this.getPlayerId()) {
-                    RoomPetDao.updatePet(0, 0, 0, petEntity.getData().getId());
-                    petEntity.leaveRoom(false);
-
-                    this.getPlayer().getPets().addPet(petEntity.getData());
-                    this.getPlayer().getSession().send(new PetInventoryMessageComposer(this.getPlayer().getPets().getPets()));
-
+                    petEntity.kick();
                 }
             }
         }
 
-        for(RoomEntity follower : this.getFollowingEntities()) {
-            if(follower instanceof BotEntity) {
-                final BotEntity botEntity = ((BotEntity) follower);
-
-                if(botEntity.getData() != null) {
-                    if (botEntity.getData().getMode() == BotMode.RELAXED) {
-                        botEntity.getData().setMode(BotMode.DEFAULT);
-                    }
-                }
-            }
-        }
+        WiredTriggerUserLeft.executeTriggers(this);
 
         // Remove entity from the room
         this.getRoom().getEntities().removeEntity(this);
@@ -394,10 +374,30 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
     public boolean onChat(String message) {
         final long time = System.currentTimeMillis();
 
-        final boolean isPlayerOnline = PlayerManager.getInstance().isOnline(this.getPlayerId());
+        if (this.isRoomMuted() && !this.getPlayer().getPermissions().getRank().roomMuteBypass() && this.getRoom().getData().getOwnerId() != this.getPlayerId() && this.getRoom().getRights().hasRights(this.getPlayerId())) {
+            return false;
+        }
 
-        if(!isPlayerOnline) {
-            this.leaveRoom(true, false, false);
+        if(BanManager.getInstance().hasBan("" + this.getPlayer().getData().getId(), BanType.MUTE)){
+            this.getPlayer().sendBubble("muted_icon", Locale.getOrDefault("muted.message", "You're muted, asshole."));
+            return false;
+        }
+
+        try {
+            if (CommandManager.getInstance().isCommand(message)) {
+                if (CommandManager.getInstance().parse(message, this.getPlayer().getSession()))
+                    return false;
+
+            } else if (CommandManager.getInstance().getNotifications().isNotificationExecutor(message, this.getPlayer().getData().getRank())) {
+
+                CommandManager.getInstance().getNotifications().execute(this.player, message.substring(1));
+
+            } else if (WiredTriggerPlayerSaysKeyword.executeTriggers(this, message)) {
+
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("Error while executing command or wired trigger", e);
             return false;
         }
 
@@ -406,16 +406,6 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
         }
 
         if (!this.getPlayer().getPermissions().getRank().floodBypass()) {
-            if (this.lastMessage.equals(message)) {
-                this.lastMessageCounter++;
-
-                if (this.lastMessageCounter >= 3) {
-                    this.getPlayer().setRoomFloodTime(this.getPlayer().getPermissions().getRank().floodTime());
-                }
-            } else {
-                this.lastMessage = message;
-                this.lastMessageCounter = 0;
-            }
 
             if (time - this.getPlayer().getRoomLastMessageTime() < 750) {
                 this.getPlayer().setRoomFloodFlag(this.getPlayer().getRoomFloodFlag() + 1);
@@ -423,7 +413,6 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
                 if (this.getPlayer().getRoomFloodFlag() >= 3) {
                     this.getPlayer().setRoomFloodTime(this.getPlayer().getPermissions().getRank().floodTime());
                     this.getPlayer().setRoomFloodFlag(0);
-
                     this.getPlayer().getSession().send(new FloodFilterMessageComposer(player.getRoomFloodTime()));
                 }
             } else {
@@ -441,30 +430,6 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
         if (message.isEmpty() || message.length() > 100)
             return false;
 
-        try {
-            if (this.getPlayer() != null && this.getPlayer().getSession() != null) {
-                if (CommandManager.getInstance().isCommand(message)) {
-                    if (CommandManager.getInstance().parse(message, this.getPlayer().getSession()))
-                        return false;
-                } else if (CommandManager.getInstance().getNotifications().isNotificationExecutor(message, this.getPlayer().getData().getRank())) {
-                    CommandManager.getInstance().getNotifications().execute(this.player, message.substring(1));
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error while executing command", e);
-            return false;
-        }
-
-        if (this.isRoomMuted() && !this.getPlayer().getPermissions().getRank().roomMuteBypass() && this.getRoom().getData().getOwnerId() != this.getPlayerId()) {
-            return false;
-        }
-
-        if ((this.getRoom().getRights().hasMute(this.getPlayerId()) || BanManager.getInstance().isMuted(this.getPlayerId())) && !this.getPlayer().getPermissions().getRank().roomMuteBypass()) {
-            this.getPlayer().getSession().send(new MutedMessageComposer(this.getRoom().getRights().getMuteTime(this.getPlayerId())));
-
-            return false;
-        }
-
 //        for (PetEntity entity : this.getRoom().getEntities().getPetEntities()) {
 //            if (message.split(" ").length > 0) {
 //                if (entity.getDatav().getName().toLowerCase().equals(message.split(" ")[0].toLowerCase())) {
@@ -479,30 +444,12 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
             this.getPlayer().getQuests().progressQuest(QuestType.SOCIAL_CHAT);
         }
 
-        this.unIdle();
+        if(!this.getRoom().hasGameRoom()) this.unIdle();
+        this.getRoom().getEntities().broadcastName(this.getRoom().getId(), this.getId(), this.getPlayer().getNameColorAndAltCode());
         return true;
     }
 
     public void postChat(String message) {
-        String triggerMessage = message.toLowerCase();
-
-        boolean isDrinkRequest = false;
-
-        for (WaiterAI.Drink drink : WaiterAI.drinks) {
-            if (triggerMessage.contains(Locale.get("drink." + drink.getTrigger()))) {
-                isDrinkRequest = true;
-            }
-        }
-
-        if(isDrinkRequest) {
-            final BotEntity nearestBot = this.nearestBotEntity(BotType.WAITER);
-
-            if(nearestBot != null) {
-                nearestBot.getAI().onTalk(this, message);
-                return;
-            }
-        }
-
         for (Map.Entry<Integer, RoomEntity> entity : this.getRoom().getEntities().getAllEntities().entrySet()) {
             if (entity.getValue().getAI() != null)
                 entity.getValue().getAI().onTalk(this, message);
@@ -669,7 +616,11 @@ public class PlayerEntity extends RoomEntity implements PlayerEntityAccess, Attr
     }
 
     public void setGameTeam(GameTeam gameTeam) {
-        this.gameTeam = gameTeam;
+        if(gameTeam == null) {
+            this.gameTeam = GameTeam.NONE;
+        } else {
+            this.gameTeam = gameTeam;
+        }
     }
 
     public boolean isKicked() {

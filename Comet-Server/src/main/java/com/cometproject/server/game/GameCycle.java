@@ -1,20 +1,21 @@
 package com.cometproject.server.game;
 
 import com.cometproject.api.networking.sessions.BaseSession;
+import com.cometproject.server.config.Locale;
 import com.cometproject.server.boot.Comet;
 import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.game.achievements.types.AchievementType;
-import com.cometproject.server.game.guides.GuideManager;
 import com.cometproject.server.game.moderation.BanManager;
 import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.network.NetworkManager;
+import com.cometproject.server.network.messages.outgoing.notification.NotificationMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.details.UserObjectMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.storage.queries.player.PlayerDao;
 import com.cometproject.server.storage.queries.system.StatisticsDao;
 import com.cometproject.server.tasks.CometTask;
 import com.cometproject.server.tasks.CometThreadManager;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import org.apache.log4j.Logger;
 
 import java.util.Calendar;
@@ -22,7 +23,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 
-public class GameCycle implements CometTask, Initialisable {
+public class GameCycle implements CometTask, Initializable {
     private static final int interval = 1;
     private static final int PLAYER_REWARD_INTERVAL = 15; // minutes
 
@@ -63,7 +64,8 @@ public class GameCycle implements CometTask, Initialisable {
                 return;
             }
 
-            BanManager.getInstance().processBans();
+
+            BanManager.getInstance().tick();
 
             final int usersOnline = NetworkManager.getInstance().getSessions().getUsersOnlineCount();
             boolean updateOnlineRecord = false;
@@ -100,16 +102,12 @@ public class GameCycle implements CometTask, Initialisable {
         final boolean updateDaily = hour == 0 && minute == 0;
         final int dailyRespects = 3;
         final int dailyScratches = 3;
+        final int dailyRoomVotes = 3;
 
         if (CometSettings.onlineRewardEnabled || updateDaily) {
             for (BaseSession client : NetworkManager.getInstance().getSessions().getSessions().values()) {
                 try {
                     if (!(client instanceof Session) || client.getPlayer() == null || client.getPlayer().getData() == null) {
-                        continue;
-                    }
-
-                    if((Comet.getTime() - ((Session) client).getLastPing()) >= 300) {
-                        client.disconnect();
                         continue;
                     }
 
@@ -121,7 +119,7 @@ public class GameCycle implements CometTask, Initialisable {
                         client.send(new UserObjectMessageComposer(((Session) client).getPlayer()));
                     }
 
-                    ((Session) client).getPlayer().getAchievements().progressAchievement(AchievementType.ONLINE_TIME, 1);
+                    ((Session) client).getPlayer().getAchievements().progressAchievement(AchievementType.ACH_2, 1);
 
                     final boolean needsReward = (Comet.getTime() - client.getPlayer().getLastReward()) >= (60 * PLAYER_REWARD_INTERVAL);
 
@@ -134,10 +132,18 @@ public class GameCycle implements CometTask, Initialisable {
                             client.getPlayer().getData().increaseActivityPoints(CometSettings.onlineRewardDuckets);
                         }
 
+                        if (CometSettings.onlineRewardDiamonds > 0) {
+                            client.getPlayer().getData().increasePoints(CometSettings.onlineRewardDiamonds);
+                        }
+
                         client.getPlayer().sendBalance();
                         client.getPlayer().getData().save();
 
                         client.getPlayer().setLastReward(Comet.getTime());
+                        client.send(new NotificationMessageComposer(
+                                Locale.get("gamecycle.reward.image"),
+                                Locale.get("gamecycle.reward.message").replace("%credits%", CometSettings.onlineRewardCredits + "").replace("%duckets%", CometSettings.onlineRewardDuckets + "").replace("%username%", client.getPlayer().getData().getUsername() + "").replace("%diamonds%", CometSettings.onlineRewardDiamonds + "").replace("%minutes%", CometSettings.onlineRewardInterval + "")));
+
                     }
                 } catch (Exception e) {
                     log.error("Error while cycling rewards", e);
@@ -145,7 +151,7 @@ public class GameCycle implements CometTask, Initialisable {
             }
 
             if(updateDaily) {
-                PlayerDao.dailyPlayerUpdate(dailyRespects, dailyScratches);
+                PlayerDao.dailyPlayerUpdate(dailyRespects, dailyScratches, dailyRoomVotes);
             }
         }
     }

@@ -16,15 +16,14 @@ public class WiredConditionPlayerInTeam extends WiredConditionItem {
      * @param itemId    The ID of the item definition
      * @param room      The instance of the room
      * @param owner     The ID of the owner
-     * @param ownerName The username of the owner
      * @param x         The position of the item on the X axis
      * @param y         The position of the item on the Y axis
      * @param z         The position of the item on the z axis
      * @param rotation  The orientation of the item
      * @param data      The JSON object associated with this item
      */
-    public WiredConditionPlayerInTeam(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredConditionPlayerInTeam(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -46,6 +45,8 @@ public class WiredConditionPlayerInTeam extends WiredConditionItem {
 
         final int team = this.getWiredData().getParams().get(PARAM_TEAM);
 
-        return playerEntity.getGameTeam() != null && playerEntity.getGameTeam().getTeamId() == team;
+        boolean result = playerEntity.getGameTeam() != null && playerEntity.getGameTeam().getTeamId() == team;
+
+        return this.isNegative && !result || !this.isNegative && result;
     }
 }

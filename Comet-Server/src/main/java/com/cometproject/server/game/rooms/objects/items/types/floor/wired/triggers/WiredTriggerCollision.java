@@ -20,8 +20,8 @@ public class WiredTriggerCollision extends WiredTriggerItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredTriggerCollision(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredTriggerCollision(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -34,13 +34,13 @@ public class WiredTriggerCollision extends WiredTriggerItem {
         return 9;
     }
 
-    public static boolean executeTriggers(RoomEntity entity) {
+    public static boolean executeTriggers(RoomEntity entity, RoomItemFloor collidingItem) {
         boolean wasExecuted = false;
 
-        for (RoomItemFloor floorItem : entity.getRoom().getItems().getByClass(WiredTriggerCollision.class)) {
+        for (RoomItemFloor floorItem : getTriggers(entity.getRoom(), WiredTriggerCollision.class)) {
             WiredTriggerCollision trigger = ((WiredTriggerCollision) floorItem);
 
-            wasExecuted = trigger.evaluate(entity, null);
+            wasExecuted = trigger.evaluate(entity, collidingItem);
         }
 
         return wasExecuted;

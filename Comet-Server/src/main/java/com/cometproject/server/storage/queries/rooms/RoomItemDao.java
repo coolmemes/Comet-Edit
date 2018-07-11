@@ -15,8 +15,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 public class RoomItemDao {
@@ -31,7 +32,7 @@ public class RoomItemDao {
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("SELECT i.*, player.username AS user_name, ltd.limited_id, ltd.limited_total FROM items i LEFT JOIN items_limited_edition ltd ON ltd.item_id = i.id RIGHT JOIN players player ON player.id = i.user_id WHERE i.room_id = ?", sqlConnection);
+            preparedStatement = SqlHelper.prepare("SELECT i.*, ltd.limited_id, ltd.limited_total FROM items i LEFT JOIN items_limited_edition ltd ON ltd.item_id = i.id WHERE i.room_id = ?", sqlConnection);
             preparedStatement.setInt(1, room.getId());
 
             resultSet = preparedStatement.executeQuery();
@@ -45,9 +46,9 @@ public class RoomItemDao {
 
                 if (ItemManager.getInstance().getDefinition(resultSet.getInt("base_item")) != null) {
                     if (ItemManager.getInstance().getDefinition(resultSet.getInt("base_item")).getType().equals("s"))
-                        floorItems.put(resultSet.getLong("id"), RoomItemFactory.createFloor(resultSet.getLong("id"), resultSet.getInt("base_item"), room, resultSet.getInt("user_id"), resultSet.getString("user_name"), resultSet.getInt("x"), resultSet.getInt("y"), resultSet.getDouble("z"), resultSet.getInt("rot"), resultSet.getString("extra_data"), limitedEditionItemData));
+                        floorItems.put(resultSet.getLong("id"), RoomItemFactory.createFloor(resultSet.getLong("id"), resultSet.getInt("base_item"), room, resultSet.getInt("user_id"), resultSet.getInt("x"), resultSet.getInt("y"), resultSet.getDouble("z"), resultSet.getInt("rot"), resultSet.getString("extra_data"), limitedEditionItemData));
                     else
-                        wallItems.put(resultSet.getLong("id"), RoomItemFactory.createWall(resultSet.getLong("id"), resultSet.getInt("base_item"), room, resultSet.getInt("user_id"), resultSet.getString("user_name"), resultSet.getString("wall_pos"), resultSet.getString("extra_data"), limitedEditionItemData));
+                        wallItems.put(resultSet.getLong("id"), RoomItemFactory.createWall(resultSet.getLong("id"), resultSet.getInt("base_item"), room, resultSet.getInt("user_id"), resultSet.getString("wall_pos"), resultSet.getString("extra_data"), limitedEditionItemData));
 
                 } else {
                     log.warn("Item (" + resultSet.getInt("id") + ") with invalid definition ID: " + resultSet.getInt("base_item"));
@@ -62,17 +63,16 @@ public class RoomItemDao {
         }
     }
 
-    public static void removeItemFromRoom(long itemId, int userId, String finalState) {
+    public static void removeItemFromRoom(long itemId, int userId) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
 
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("UPDATE items SET room_id = 0, user_id = ?, x = 0, y = 0, z = 0, wall_pos = '', extra_data = ? WHERE id = ?", sqlConnection);
+            preparedStatement = SqlHelper.prepare("UPDATE items SET room_id = 0, user_id = ?, x = 0, y = 0, z = 0, wall_pos = '' WHERE id = ?", sqlConnection);
             preparedStatement.setInt(1, userId);
-            preparedStatement.setString(2, finalState);
-            preparedStatement.setLong(3, itemId);
+            preparedStatement.setLong(2, itemId);
 
             SqlHelper.executeStatementSilently(preparedStatement, false);
         } catch (SQLException e) {
@@ -276,7 +276,7 @@ public class RoomItemDao {
         }
     }
 
-    public static void saveFloorItems(Collection<RoomItem> items) {
+    public static void saveFloorItems(List<RoomItem> items) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
 
@@ -331,18 +331,17 @@ public class RoomItemDao {
         }
     }
 
-    public static void saveReward(long itemId, int playerId, final String rewardData) {
+    public static void saveReward(long itemId, int playerId) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
 
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("INSERT into items_wired_rewards (item_id, player_id, reward_data) VALUES(?, ?, ?);", sqlConnection);
+            preparedStatement = SqlHelper.prepare("INSERT into items_wired_rewards (item_id, player_id) VALUES(?, ?);", sqlConnection);
 
             preparedStatement.setLong(1, itemId);
             preparedStatement.setInt(2, playerId);
-            preparedStatement.setString(3, rewardData);
 
             SqlHelper.executeStatementSilently(preparedStatement, false);
         } catch (SQLException e) {
@@ -353,31 +352,24 @@ public class RoomItemDao {
         }
     }
 
-    public static Map<Integer, Set<String>> getGivenRewards(long id) {
+    public static Set<Integer> getGivenRewards(long id) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
 
-        Map<Integer, Set<String>> data = new ConcurrentHashMap<>();
+        Set<Integer> data = new ConcurrentHashSet<>();
 
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("SELECT player_id, reward_data FROM items_wired_rewards WHERE item_id = ?;", sqlConnection);
+            preparedStatement = SqlHelper.prepare("SELECT player_id FROM items_wired_rewards WHERE item_id = ?;", sqlConnection);
 
             preparedStatement.setLong(1, id);
 
             resultSet = preparedStatement.executeQuery();
 
             while (resultSet.next()) {
-                final int playerId = resultSet.getInt("player_id");
-                final String rewardData = resultSet.getString("reward_data");
-
-                if(!data.containsKey(playerId)) {
-                    data.put(playerId, new HashSet<>());
-                }
-
-                data.get(playerId).add(rewardData);
+                data.add(resultSet.getInt("player_id"));
             }
         } catch (SQLException e) {
             SqlHelper.handleSqlException(e);

@@ -1,37 +1,34 @@
 package com.cometproject.server.storage.queries.catalog;
 
-import com.cometproject.server.game.catalog.types.Voucher;
-import com.cometproject.server.game.catalog.types.VoucherStatus;
-import com.cometproject.server.game.catalog.types.VoucherType;
+import com.cometproject.server.game.catalog.types.CatalogVoucher;
 import com.cometproject.server.storage.SqlHelper;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class VoucherDao {
-    public static Voucher findVoucherByCode(final String code) {
+    public static CatalogVoucher findVoucherByCode(final String code) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
 
-        Voucher voucher = null;
+        CatalogVoucher voucher = null;
 
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("SELECT * FROM `vouchers` WHERE `code` = ?", sqlConnection);
+            preparedStatement = SqlHelper.prepare("SELECT * FROM `catalog_vouchers` WHERE `code` = ? AND `limit_use` > 0", sqlConnection);
 
             preparedStatement.setString(1, code);
 
             resultSet = preparedStatement.executeQuery();
 
             while (resultSet.next()) {
-                voucher = new Voucher(resultSet.getInt("id"), VoucherType.valueOf(resultSet.getString("type")),
+                voucher = new CatalogVoucher(resultSet.getInt("id"), CatalogVoucher.VoucherType.valueOf(resultSet.getString("type")),
                         resultSet.getString("data"), resultSet.getInt("created_by"), resultSet.getInt("created_at"),
-                        resultSet.getInt("claimed_by"), resultSet.getInt("claimed_at"),
-                        VoucherStatus.valueOf(resultSet.getString("status")), resultSet.getString("code"));
+                        resultSet.getString("claimed_by"), resultSet.getInt("claimed_at"), resultSet.getInt("limit_use"),
+                        CatalogVoucher.VoucherStatus.valueOf(resultSet.getString("status")), resultSet.getString("code"));
             }
 
         } catch (SQLException e) {
@@ -45,17 +42,18 @@ public class VoucherDao {
         return voucher;
     }
 
-    public static void claimVoucher(final int voucherId, final int playerId) {
+    public static void claimVoucher(final int voucherId, final int playerId, final boolean claimed) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
 
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("UPDATE `vouchers` SET `status` = 'CLAIMED', `claimed_by` = ?, `claimed_at` = UNIX_TIMESTAMP() WHERE id = ?;", sqlConnection);
+            preparedStatement = SqlHelper.prepare("UPDATE `catalog_vouchers` SET `status` = ?, `claimed_by` = concat(?, claimed_by), `limit_use` = limit_use - 1, `claimed_at` = UNIX_TIMESTAMP() WHERE id = ?;", sqlConnection);
 
-            preparedStatement.setInt(1, playerId);
-            preparedStatement.setInt(2, voucherId);
+            preparedStatement.setString(1, claimed ? "CLAIMED" : "UNCLAIMED");
+            preparedStatement.setString(2, playerId + ",");
+            preparedStatement.setInt(3, voucherId);
 
             preparedStatement.execute();
 

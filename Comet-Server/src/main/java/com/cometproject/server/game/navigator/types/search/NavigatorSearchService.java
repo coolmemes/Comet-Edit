@@ -25,7 +25,7 @@ import java.util.concurrent.Executors;
 public class NavigatorSearchService implements CometTask {
     private static NavigatorSearchService searchServiceInstance;
 
-    private Executor searchExecutor = Executors.newFixedThreadPool(8);
+    private Executor searchExecutor = Executors.newFixedThreadPool(2);
 
     public NavigatorSearchService() {
 //        CometThreadManager.getInstance().executePeriodic(this, 0, 3000, TimeUnit.MILLISECONDS);
@@ -89,10 +89,7 @@ public class NavigatorSearchService implements CometTask {
                 break;
 
             case POPULAR:
-
                 rooms.addAll(order(RoomManager.getInstance().getRoomsByCategory(-1), expanded ? category.getRoomCountExpanded() : category.getRoomCount()));
-
-
                 break;
 
             case CATEGORY:
@@ -162,10 +159,6 @@ public class NavigatorSearchService implements CometTask {
 
             case MY_FRIENDS_ROOMS:
                 List<RoomData> friendsRooms = Lists.newArrayList();
-
-                if(player.getMessenger() == null) {
-                    return rooms;
-                }
 
                 for(MessengerFriend messengerFriend : player.getMessenger().getFriends().values()) {
                     if(messengerFriend.isInRoom()) {

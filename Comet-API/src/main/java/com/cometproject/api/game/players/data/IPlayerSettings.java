@@ -19,10 +19,6 @@ public interface IPlayerSettings {
     void setAllowFriendRequests(boolean allowFriendRequests);
 
     boolean getAllowTrade();
-    
-    boolean getAllowFollow();
-    
-    boolean getAllowMimic();
 
     int getHomeRoom();
 

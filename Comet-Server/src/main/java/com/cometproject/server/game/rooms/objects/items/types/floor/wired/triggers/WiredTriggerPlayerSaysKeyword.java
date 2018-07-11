@@ -23,8 +23,8 @@ public class WiredTriggerPlayerSaysKeyword extends WiredTriggerItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredTriggerPlayerSaysKeyword(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredTriggerPlayerSaysKeyword(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -41,6 +41,8 @@ public class WiredTriggerPlayerSaysKeyword extends WiredTriggerItem {
         boolean wasExecuted = false;
 
         for (RoomItemFloor floorItem : playerEntity.getRoom().getItems().getByClass(WiredTriggerPlayerSaysKeyword.class)) {
+            if(floorItem.getItemsOnStack().size() < 1) { return false; }
+
             WiredTriggerPlayerSaysKeyword trigger = ((WiredTriggerPlayerSaysKeyword) floorItem);
 
             final boolean ownerOnly = trigger.getWiredData().getParams().containsKey(PARAM_OWNERONLY) && trigger.getWiredData().getParams().get(PARAM_OWNERONLY) != 0;
@@ -54,7 +56,7 @@ public class WiredTriggerPlayerSaysKeyword extends WiredTriggerItem {
         }
 
         if (wasExecuted) {
-            playerEntity.getPlayer().getSession().send(new WhisperMessageComposer(playerEntity.getId(), message));
+            playerEntity.getPlayer().getSession().send(new WhisperMessageComposer(playerEntity.getId(), message, 0));
         }
 
         return wasExecuted;

@@ -16,7 +16,7 @@ public class ApplyActionMessageEvent implements Event {
             if (actionId == 5) {
                 client.getPlayer().getEntity().setIdle();
             } else {
-                client.getPlayer().getEntity().unIdle();
+                if(!client.getPlayer().getEntity().getRoom().hasGameRoom()) client.getPlayer().getEntity().unIdle();
             }
 
             if (actionId == 1) {

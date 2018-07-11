@@ -1,8 +1,8 @@
 package com.cometproject.server.game.players.data;
 
 public interface PlayerAvatar {
-    byte USERNAME_FIGURE = 0;
-    byte USERNAME_FIGURE_MOTTO = 1;
+    public static final byte USERNAME_FIGURE = 0;
+    public static final byte USERNAME_FIGURE_MOTTO = 1;
 
     int getId();
 

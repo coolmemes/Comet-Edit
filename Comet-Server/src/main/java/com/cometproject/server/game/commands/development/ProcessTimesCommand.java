@@ -33,12 +33,7 @@ public class ProcessTimesCommand extends ChatCommand {
 
     @Override
     public String getPermission() {
-        return "debug";
-    }
-    
-    @Override
-    public String getParameter() {
-        return "";
+        return "dev";
     }
 
     @Override

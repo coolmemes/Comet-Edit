@@ -31,7 +31,7 @@ public class RoomDataMessageComposer extends MessageComposer {
     public RoomDataMessageComposer(final Room room) {
         this.room = room;
         this.checkEntry = true;
-        this.canMute = false;
+        this.canMute = true;
         this.isLoading = true;
     }
 

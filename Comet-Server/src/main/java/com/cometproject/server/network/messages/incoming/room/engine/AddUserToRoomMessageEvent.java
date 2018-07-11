@@ -11,6 +11,7 @@ import com.cometproject.server.game.rooms.objects.items.types.floor.wired.trigge
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.group.GroupBadgesMessageComposer;
+import com.cometproject.server.network.messages.outgoing.notification.AdvancedAlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.*;
 import com.cometproject.server.network.messages.outgoing.room.engine.RoomEntryInfoMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.items.FloorItemsMessageComposer;
@@ -23,7 +24,6 @@ import com.cometproject.server.network.messages.outgoing.room.polls.QuickPollRes
 import com.cometproject.server.network.messages.outgoing.room.settings.RoomVisualizationSettingsMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.protocol.messages.MessageEvent;
-import com.cometproject.server.storage.queries.polls.PollDao;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,6 +53,10 @@ public class AddUserToRoomMessageEvent implements Event {
 
         if (client.getPlayer().getRoomFloodTime() >= 1) {
             client.sendQueue(new FloodFilterMessageComposer(client.getPlayer().getRoomFloodTime()));
+        }
+
+        if(room.getData().getChatDistance() > 0 && !room.hasGameRoom()){
+            room.setGameRoom(true);
         }
 
         Map<Integer, String> groupsInRoom = new HashMap<>();
@@ -114,7 +118,7 @@ public class AddUserToRoomMessageEvent implements Event {
         if (PollManager.getInstance().roomHasPoll(room.getId())) {
             Poll poll = PollManager.getInstance().getPollByRoomId(room.getId());
 
-            if (!poll.getPlayersAnswered().contains(client.getPlayer().getId()) && !PollDao.hasAnswered(client.getPlayer().getId(), poll.getPollId())) {
+            if (!poll.getPlayersAnswered().contains(client.getPlayer().getId())) {
                 client.send(new InitializePollMessageComposer(poll.getPollId(), poll.getPollTitle(), poll.getThanksMessage()));
             }
         }

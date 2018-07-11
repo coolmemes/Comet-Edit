@@ -38,15 +38,9 @@ public class GroupPartsMessageComposer extends MessageComposer {
         for (Integer room : availableRooms) {
             RoomData roomData = RoomManager.getInstance().getRoomData(room);
             if (GroupManager.getInstance().getGroupByRoomId(room) == null) {
-                if(roomData == null) {
-                    msg.writeInt(room);
-                    msg.writeString("Unavailable");
-                    msg.writeBoolean(false);
-                } else {
-                    msg.writeInt(roomData.getId());
-                    msg.writeString(roomData.getName());
-                    msg.writeBoolean(false);
-                }
+                msg.writeInt(roomData.getId());
+                msg.writeString(roomData.getName());
+                msg.writeBoolean(false);
             }
         }
 

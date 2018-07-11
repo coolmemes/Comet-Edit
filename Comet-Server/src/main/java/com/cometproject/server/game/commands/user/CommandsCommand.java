@@ -1,6 +1,5 @@
 package com.cometproject.server.game.commands.user;
 
-import com.cometproject.server.boot.Comet;
 import com.cometproject.api.commands.CommandInfo;
 import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.commands.ChatCommand;
@@ -27,11 +26,11 @@ public class CommandsCommand extends ChatCommand {
             if (command.getValue().isHidden()) continue;
 
             if (client.getPlayer().getPermissions().hasCommand(command.getValue().getPermission())) {
-                list.append(command.getKey().split(",")[0] + " " + command.getValue().getParameter() + " " + command.getValue().getDescription() + "\n");
+                list.append(command.getKey().split(",")[0] + " - " + command.getValue().getDescription() + "\n");
             }
         }
 
-        client.send(new MotdNotificationMessageComposer("Comet Server - " + Comet.getBuild() + "\n================================================\n" + Locale.get("command.commands.title") + "\n================================================\n\n" + list.toString()));
+        client.send(new MotdNotificationMessageComposer(Locale.get("command.commands.title") + "\n================================================\n" + list.toString()));
     }
 
     @Override
@@ -40,17 +39,7 @@ public class CommandsCommand extends ChatCommand {
     }
 
     @Override
-    public String getParameter() {
-        return "";
-    }
-
-    @Override
     public String getDescription() {
         return Locale.get("command.commands.description");
-    }
-    
-    @Override
-    public boolean isHidden() {
-        return true;
     }
 }

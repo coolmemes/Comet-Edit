@@ -19,17 +19,18 @@ public abstract class RoomModel {
     private int mapSizeX;
     private int mapSizeY;
 
-    private int[][] squareHeight;
+    private double[][] squareHeight;
     private RoomTileState[][] squareState;
 
     private final IMessageComposer floorMapMessageComposer;
 
     private int wallHeight;
 
-    public RoomModel(String name, String heightmap, int doorX, int doorY, int doorRotation, int wallHeight) throws InvalidModelException {
+    public RoomModel(String name, String heightmap, int doorX, int doorY, int doorZ, int doorRotation, int wallHeight) throws InvalidModelException {
         this.name = name;
         this.doorX = doorX;
         this.doorY = doorY;
+        this.doorZ = doorZ;
         this.doorRotation = doorRotation;
         this.wallHeight = wallHeight;
 
@@ -39,7 +40,7 @@ public abstract class RoomModel {
 
         this.mapSizeX = axes[0].length();
         this.mapSizeY = axes.length;
-        this.squareHeight = new int[mapSizeX][mapSizeY];
+        this.squareHeight = new double[mapSizeX][mapSizeY];
         this.squareState = new RoomTileState[mapSizeX][mapSizeY];
 
         int maxTileHeight = 0;
@@ -60,7 +61,7 @@ public abstract class RoomModel {
                         squareState[x][y] = (x == doorX && y == doorY) ? RoomTileState.VALID : RoomTileState.INVALID;
                     } else {
                         squareState[x][y] = RoomTileState.VALID;
-                        squareHeight[x][y] = ModelUtils.getHeight(tile);
+                        squareHeight[x][y] = (double) ModelUtils.getHeight(tile);
 
                         if (squareHeight[x][y] > maxTileHeight) {
                             maxTileHeight = (int) Math.ceil(squareHeight[x][y]);
@@ -70,8 +71,6 @@ public abstract class RoomModel {
                     x++;
                 }
             }
-
-            this.doorZ = this.squareHeight[doorX][doorY];
 
             for (String mapLine : heightmap.split("\r\n")) {
                 if (mapLine.isEmpty()) {
@@ -134,7 +133,7 @@ public abstract class RoomModel {
         return this.squareState;
     }
 
-    public int[][] getSquareHeight() {
+    public double[][] getSquareHeight() {
         return this.squareHeight;
     }
 

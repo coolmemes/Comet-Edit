@@ -45,6 +45,7 @@ public class RoomData implements IRoomData {
     private int thicknessFloor;
     private boolean allowWalkthrough;
     private boolean allowPets;
+    private boolean wiredHidden;
     private String heightmap;
 
     private RoomMuteState muteState;
@@ -122,50 +123,7 @@ public class RoomData implements IRoomData {
         this.disabledCommands = Lists.newArrayList(room.getString("disabled_commands").split(","));
         this.groupId = room.getInt("group_id");
         this.requiredBadge = room.getString("required_badge");
-    }
-
-    public RoomData(int id, RoomType type, String name, String description, int ownerId, String owner, int category,
-                    int maxUsers, RoomAccessType access, String password, String originalPassword,
-                    RoomTradeState tradeState, int score, String[] tags, Map<String, String> decorations,
-                    String model, boolean hideWalls, int thicknessWall, int thicknessFloor, boolean allowWalkthrough,
-                    boolean allowPets, String heightmap, RoomMuteState muteState, RoomKickState kickState,
-                    RoomBanState banState, int bubbleMode, int bubbleType, int bubbleScroll, int chatDistance,
-                    int antiFloodSettings, List<String> disabledCommands, int groupId, long lastReferenced,
-                    String requiredBadge) {
-        this.id = id;
-        this.type = type;
-        this.name = name;
-        this.description = description;
-        this.ownerId = ownerId;
-        this.owner = owner;
-        this.category = category;
-        this.maxUsers = maxUsers;
-        this.access = access;
-        this.password = password;
-        this.originalPassword = originalPassword;
-        this.tradeState = tradeState;
-        this.score = score;
-        this.tags = tags;
-        this.decorations = decorations;
-        this.model = model;
-        this.hideWalls = hideWalls;
-        this.thicknessWall = thicknessWall;
-        this.thicknessFloor = thicknessFloor;
-        this.allowWalkthrough = allowWalkthrough;
-        this.allowPets = allowPets;
-        this.heightmap = heightmap;
-        this.muteState = muteState;
-        this.kickState = kickState;
-        this.banState = banState;
-        this.bubbleMode = bubbleMode;
-        this.bubbleType = bubbleType;
-        this.bubbleScroll = bubbleScroll;
-        this.chatDistance = chatDistance;
-        this.antiFloodSettings = antiFloodSettings;
-        this.disabledCommands = disabledCommands;
-        this.groupId = groupId;
-        this.lastReferenced = lastReferenced;
-        this.requiredBadge = requiredBadge;
+        this.wiredHidden = room.getString("wired_hidden").equals("1");
     }
 
     public void save() {
@@ -194,8 +152,8 @@ public class RoomData implements IRoomData {
         RoomDao.updateRoom(id, name, StringUtils.abbreviate(description, 255), ownerId, owner, category, maxUsers, access, password, score,
                 tagString, decorString.equals("") ? "" : decorString.substring(0, decorString.length() - 1),
                 model, hideWalls, thicknessWall, thicknessFloor, allowWalkthrough, allowPets, heightmap, tradeState,
-                muteState, kickState, banState, bubbleMode, bubbleType, bubbleScroll, chatDistance, antiFloodSettings, this.disabledCommands.isEmpty() ? "" : StringUtils.join(this.disabledCommands, ","), this.groupId, this.requiredBadge
-        );
+                muteState, kickState, banState, bubbleMode, bubbleType, bubbleScroll, chatDistance, antiFloodSettings, this.disabledCommands.isEmpty() ? "" : StringUtils.join(this.disabledCommands, ","),
+                this.groupId, this.requiredBadge, this.wiredHidden);
     }
 
     public int getId() {
@@ -364,12 +322,24 @@ public class RoomData implements IRoomData {
         return tradeState;
     }
 
+    public boolean isWiredHidden() {
+        return this.wiredHidden;
+    }
+
+    public void setIsWiredHidden(boolean hiddenWired) {
+        this.wiredHidden = hiddenWired;
+    }
+
     public void setTradeState(RoomTradeState tradeState) {
         this.tradeState = tradeState;
     }
 
     public int getBubbleMode() {
         return bubbleMode;
+    }
+
+    public int getIdleTimer() {
+        return chatDistance;
     }
 
     public void setBubbleMode(int bubbleMode) {

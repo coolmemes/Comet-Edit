@@ -16,6 +16,5 @@ public class CitizenshipStatusMessageComposer extends MessageComposer {
         msg.writeString("helper");
         msg.writeInt(4);
         msg.writeInt(4);
-
     }
 }

@@ -27,8 +27,7 @@
             </div>
             <div class="panel-body">
                 #if($loginError == 0)
-                    <div class="alert alert-danger">Invalid login credentials</div>
-
+                    ERROR: INVALID CREDENTIALS
                 #elseif($loginError == 1)
                     ERROR: SUSPENDED
                 #end

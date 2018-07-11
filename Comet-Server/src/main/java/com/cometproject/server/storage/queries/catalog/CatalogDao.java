@@ -2,17 +2,20 @@ package com.cometproject.server.storage.queries.catalog;
 
 import com.cometproject.server.boot.Comet;
 import com.cometproject.server.game.catalog.CatalogManager;
-import com.cometproject.server.game.catalog.purchase.OldCatalogPurchaseHandler;
 import com.cometproject.server.game.catalog.types.CatalogFrontPageEntry;
 import com.cometproject.server.game.catalog.types.CatalogItem;
 import com.cometproject.server.game.catalog.types.CatalogPage;
+import com.cometproject.server.game.nuxs.NuxGift;
 import com.cometproject.server.storage.SqlHelper;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 public class CatalogDao {
@@ -80,6 +83,42 @@ public class CatalogDao {
         }
     }
 
+    public static List<NuxGift> getNuxGiftsSelectionView() {
+        Connection sqlConnection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+
+        List<NuxGift> nuxGiftsData = new ArrayList<NuxGift>();
+
+        try {
+            sqlConnection = SqlHelper.getConnection();
+
+            preparedStatement = SqlHelper.prepare("SELECT id, page_type, type, reward_icon, reward_name, reward_productdata, reward_data FROM catalog_gift_nuxuser ORDER BY id ASC", sqlConnection);
+            resultSet = preparedStatement.executeQuery();
+
+            int id = 0;
+
+            while (resultSet.next()) {
+                nuxGiftsData.add(new NuxGift(
+                        id,
+                        resultSet.getString("type"),
+                        resultSet.getInt("page_type"),
+                        resultSet.getString("reward_icon"),
+                        resultSet.getString("reward_name"),
+                        resultSet.getString("reward_productdata"),
+                        resultSet.getString("reward_data")));
+                id++;
+            }
+        } catch (SQLException e) {
+            SqlHelper.handleSqlException(e);
+        } finally {
+            SqlHelper.closeSilently(resultSet);
+            SqlHelper.closeSilently(preparedStatement);
+            SqlHelper.closeSilently(sqlConnection);
+        }
+
+        return nuxGiftsData;
+    }
 
     private static Map<Integer, CatalogItem> getItemsByPage(int pageId) {
         Connection sqlConnection = null;
@@ -132,16 +171,15 @@ public class CatalogDao {
         return data;
     }
 
-    public static void updateLimitSellsForItem(int itemId, int amount) {
+    public static void updateLimitSellsForItem(int itemId) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
 
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("UPDATE catalog_items SET limited_sells = limited_sells + ? WHERE id = ?", sqlConnection);
-            preparedStatement.setInt(1, amount);
-            preparedStatement.setInt(2, itemId);
+            preparedStatement = SqlHelper.prepare("UPDATE catalog_items SET limited_sells = limited_sells + 1 WHERE id = ?", sqlConnection);
+            preparedStatement.setInt(1, itemId);
 
             SqlHelper.executeStatementSilently(preparedStatement, false);
         } catch (SQLException e) {
@@ -201,62 +239,5 @@ public class CatalogDao {
             SqlHelper.closeSilently(preparedStatement);
             SqlHelper.closeSilently(sqlConnection);
         }
-    }
-
-    public static void saveRecentPurchase(final int playerId, final int catalogItem, final int amount, final String data) {
-        Connection sqlConnection = null;
-        PreparedStatement preparedStatement = null;
-
-        try {
-            sqlConnection = SqlHelper.getConnection();
-
-            preparedStatement = SqlHelper.prepare("INSERT into `player_recent_purchases` (player_id, catalog_item, amount, data) VALUES(?, ?, ?, ?);", sqlConnection);
-
-            preparedStatement.setInt(1, playerId);
-            preparedStatement.setInt(2, catalogItem);
-            preparedStatement.setInt(3, amount);
-            preparedStatement.setString(4, data);
-
-            preparedStatement.execute();
-        } catch (SQLException e) {
-            SqlHelper.handleSqlException(e);
-        } finally {
-            SqlHelper.closeSilently(preparedStatement);
-            SqlHelper.closeSilently(sqlConnection);
-        }
-    }
-
-    public static Set<CatalogItem> findRecentPurchases(final int count, final int playerId) {
-        Connection sqlConnection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-
-        final Set<CatalogItem> recentPurchases = new HashSet<>();
-
-        try {
-            sqlConnection = SqlHelper.getConnection();
-
-            preparedStatement = SqlHelper.prepare("SELECT DISTINCT `catalog_item` FROM player_recent_purchases WHERE player_id = ? LIMIT " + count, sqlConnection);
-            preparedStatement.setInt(1, playerId);
-
-            resultSet = preparedStatement.executeQuery();
-
-            while (resultSet.next()) {
-                final int catalogItemId = resultSet.getInt("catalog_item");
-                final CatalogItem catalogItem = CatalogManager.getInstance().getCatalogItem(catalogItemId);
-
-                if(catalogItem != null) {
-                    recentPurchases.add(catalogItem);
-                }
-            }
-        } catch (SQLException e) {
-            SqlHelper.handleSqlException(e);
-        } finally {
-            SqlHelper.closeSilently(resultSet);
-            SqlHelper.closeSilently(preparedStatement);
-            SqlHelper.closeSilently(sqlConnection);
-        }
-
-        return recentPurchases;
     }
 }

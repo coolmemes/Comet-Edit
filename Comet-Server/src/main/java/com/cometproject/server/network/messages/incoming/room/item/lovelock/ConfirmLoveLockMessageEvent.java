@@ -1,6 +1,5 @@
 package com.cometproject.server.network.messages.incoming.room.item.lovelock;
 
-import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.LoveLockFloorItem;
@@ -25,8 +24,7 @@ public class ConfirmLoveLockMessageEvent implements Event {
             return;
         }
 
-        int virtualId = msg.readInt();
-        long itemId = ItemManager.getInstance().getItemIdByVirtualId(virtualId);
+        final int itemId = msg.readInt();
         final boolean confirmed = msg.readBoolean();
 
         RoomItemFloor floorItem = room.getItems().getFloorItem(itemId);

@@ -2,21 +2,13 @@ package com.cometproject.server.network.messages.incoming.room.floor;
 
 import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.config.Locale;
-import com.cometproject.server.game.players.types.Player;
-import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.game.rooms.models.CustomFloorMapData;
 import com.cometproject.server.game.rooms.types.Room;
-import com.cometproject.server.game.rooms.types.RoomReloadListener;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.notification.AdvancedAlertMessageComposer;
-import com.cometproject.server.network.messages.outgoing.notification.AlertMessageComposer;
-import com.cometproject.server.network.messages.outgoing.room.engine.RoomForwardMessageComposer;
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.network.sessions.Session;
-import com.cometproject.server.utilities.JsonUtil;
-
-import java.util.Set;
-import java.util.function.BiConsumer;
+import com.cometproject.server.utilities.JsonFactory;
 
 
 public class SaveFloorMessageEvent implements Event {
@@ -82,25 +74,14 @@ public class SaveFloorMessageEvent implements Event {
         room.getData().setThicknessWall(wallThickness);
         room.getData().setThicknessFloor(floorThickness);
 
-        final CustomFloorMapData floorMapData = new CustomFloorMapData(doorX, doorY, doorRotation, model.trim(), wallHeight == 0 ? room.getModel().getWallHeight() : wallHeight);
+        final CustomFloorMapData floorMapData = new CustomFloorMapData(doorX, doorY, doorRotation, model.trim(), wallHeight);
 
-        room.getData().setHeightmap(JsonUtil.getInstance().toJson(floorMapData));
+        room.getData().setHeightmap(JsonFactory.getInstance().toJson(floorMapData));
         room.getData().save();
 
-//        client.send(new AdvancedAlertMessageComposer("Model Saved", Locale.get("command.floor.complete"), "Go", "event:navigator/goto/" + client.getPlayer().getEntity().getRoom().getId(), ""));
+        client.send(new AdvancedAlertMessageComposer(Locale.get("command.floor.complete.title"), Locale.get("command.floor.complete"), "Go", "event:navigator/goto/" + client.getPlayer().getEntity().getRoom().getId(), ""));
 
         room.getItems().commit();
-
-        final RoomReloadListener reloadListener = new RoomReloadListener(room, (players, newRoom) -> {
-           for(Player player : players) {
-               if(player.getEntity() == null) {
-                   player.getSession().send(new AlertMessageComposer(Locale.get("command.floor.complete")));
-                   player.getSession().send(new RoomForwardMessageComposer(newRoom.getId()));
-               }
-           }
-        });
-
-        RoomManager.getInstance().addReloadListener(room.getId(), reloadListener);
-        room.reload();
+        room.setIdleNow();
     }
 }

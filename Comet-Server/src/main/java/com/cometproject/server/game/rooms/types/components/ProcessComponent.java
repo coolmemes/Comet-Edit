@@ -7,7 +7,8 @@ import com.cometproject.server.game.rooms.objects.entities.RoomEntityStatus;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntityType;
 import com.cometproject.server.game.rooms.objects.entities.effects.PlayerEffect;
 import com.cometproject.server.game.rooms.objects.entities.pathfinding.Square;
-import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.triggers.WiredTriggerUserCollision;
+import com.cometproject.server.game.rooms.types.mapping.RoomEntityMovementNode;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.TeleportPadFloorItem;
@@ -47,6 +48,8 @@ public class ProcessComponent implements CometTask {
     private List<PlayerEntity> playersToRemove;
     private List<RoomEntity> entitiesToUpdate;
 
+    private int test;
+
     public ProcessComponent(Room room) {
         this.room = room;
         this.log = Logger.getLogger("Room Process [" + room.getData().getName() + ", #" + room.getId() + "]");
@@ -85,7 +88,7 @@ public class ProcessComponent implements CometTask {
             entitiesToUpdate = new ArrayList<>();
 
             for (RoomEntity entity : entities.values()) {
-               this.startProcessing(entity);
+                this.startProcessing(entity);
             }
 
             // only send the updates if we need to
@@ -275,18 +278,22 @@ public class ProcessComponent implements CometTask {
                 oldTile.getEntities().remove(entity);
             }
 
+            if(newTile != null && !newTile.getEntities().contains(entity)) {
+                newTile.getEntities().add(entity);
+            }
+
             entity.updateAndSetPosition(null);
             entity.setPosition(newPosition);
-
-            if(entity instanceof BotEntity) {
-                entity.getAI().onReachedTile(newTile);
-            }
 
             // Step off
             for (RoomItemFloor item : itemsOnOldSq) {
                 if (!itemsOnSq.contains(item)) {
-                    item.onEntityStepOff(entity);
-                    WiredTriggerWalksOffFurni.executeTriggers(entity, item);
+                    RoomItemFloor topItem = this.getRoom().getItems().getFloorItem(oldTile.getTopItem());
+
+                    if (topItem != null) {
+                        item.onEntityStepOff(entity);
+                        WiredTriggerWalksOffFurni.executeTriggers(entity, topItem);
+                    }
                 }
             }
 
@@ -323,6 +330,7 @@ public class ProcessComponent implements CometTask {
 
                     topItem.onEntityStepOn(entity);
                     WiredTriggerWalksOnFurni.executeTriggers(entity, topItem);
+
                 }
             } else if (newTile != null) {
                 newTile.onEntityEntersTile(entity);
@@ -372,7 +380,6 @@ public class ProcessComponent implements CometTask {
 
             if (entity instanceof PlayerEntity && entity.isIdleAndIncrement() && entity.isVisible()) {
                 if (entity.getIdleTime() >= 60 * CometSettings.roomIdleMinutes * 2) {
-                    if (this.getRoom().getData().getOwnerId() != ((PlayerEntity) entity).getPlayerId())
                         return true;
                 }
             }
@@ -446,15 +453,21 @@ public class ProcessComponent implements CometTask {
                     entity.applyEffect(entity.getLastEffect());
                 }
 
+                byte cancellationReason = -1;
+
                 if (this.getRoom().getEntities().positionHasEntity(nextPos)) {
                     final boolean allowWalkthrough = this.getRoom().getData().getAllowWalkthrough();
                     final boolean isFinalStep = entity.getWalkingGoal().equals(nextPos);
 
                     if (isFinalStep && allowWalkthrough) {
                         isCancelled = true;
+                        cancellationReason = 1;
                     } else if (!allowWalkthrough) {
                         isCancelled = true;
+                        cancellationReason = 1;
                     }
+
+                    WiredTriggerUserCollision.executeTriggers(entity);
 
                     RoomEntity entityOnTile = this.getRoom().getMapping().getTile(nextPos.getX(), nextPos.getY()).getEntity();
 
@@ -484,12 +497,6 @@ public class ProcessComponent implements CometTask {
 
                     List<RoomItemFloor> postItems = this.getRoom().getItems().getItemsOnSquare(nextSq.x, nextSq.y);
 
-                    for (RoomItemFloor item : postItems) {
-                        if (item != null) {
-                            item.onEntityPostStepOn(entity);
-                        }
-                    }
-
                     tile.getEntities().add(entity);
                 } else {
                     if (entity.getWalkingPath() != null) {
@@ -506,13 +513,33 @@ public class ProcessComponent implements CometTask {
                 entity.getProcessingPath().clear();
 
                 // RoomTile is blocked, let's try again!
-                entity.moveTo(entity.getWalkingGoal().getX(), entity.getWalkingGoal().getY());
+                if(!isLastStep) {
+                        entity.moveTo(entity.getWalkingGoal().getX(), entity.getWalkingGoal().getY());
+                    } else {
+                    final RoomTile goalTile = this.getRoom().getMapping().getTile(entity.getWalkingGoal());
+
+                    if (goalTile != null) {
+                        for (RoomTile adjacentTile : goalTile.getAdjacentTiles(entity.getPosition())) {
+
+                            if (adjacentTile != null && adjacentTile.getMovementNode() != RoomEntityMovementNode.CLOSED) {
+                                entity.moveTo(adjacentTile.getPosition());
+                                WiredTriggerUserCollision.executeTriggers(entity);
+                                this.processEntity(entity, true);
+                                return false;
+                            }
+                        }
+                    }
+                }
                 return this.processEntity(entity, true);
             }
         } else {
             if (isPlayer && ((PlayerEntity) entity).isKicked())
                 return true;
         }
+
+        //if(entity.getPositionToSet() != null) {
+        //    this.updateEntityStuff(entity);
+        //}
 
         // Handle expiring effects
         if (entity.getCurrentEffect() != null) {
@@ -529,12 +556,7 @@ public class ProcessComponent implements CometTask {
         if (entity.isWalkCancelled()) {
             entity.setWalkCancelled(false);
         }
-//
-//        if(entity.getPendingWalk() != null) {
-//            entity.moveTo(entity.getPendingWalk());
-//            entity.setPendingWalk(null);
-//        }
-//
+
         return false;
     }
 

@@ -13,7 +13,7 @@ public class RoomErrorMessageComposer extends MessageComposer {
 
     @Override
     public short getId() {
-        return Composers.GenericErrorMessageComposer;
+        return Composers.RoomEnterErrorMessageComposer;
     }
 
     @Override
@@ -21,3 +21,8 @@ public class RoomErrorMessageComposer extends MessageComposer {
         msg.writeInt(this.errorCode);
     }
 }
+
+/*
+1 -> Room full
+4 -> Ban
+ */

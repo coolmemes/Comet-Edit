@@ -36,19 +36,14 @@ public class ScratchPetMessageEvent implements Event {
             }
 
             if(tile != null) {
-                if(!tile.isReachable(playerEntity)) {
-                    petEntity.getPetAI().waitForInteraction();
-                    petEntity.cancelWalk();
-
-                    scratch(client, petEntity);
-                } else {
-                    playerEntity.moveTo(position);
-                    tile.scheduleEvent(playerEntity.getId(), (e) -> scratch(((PlayerEntity) e).getPlayer().getSession(), petEntity));
-                }
+                playerEntity.moveTo(position);
+                tile.scheduleEvent(playerEntity.getId(), (e) -> scratch(((PlayerEntity) e).getPlayer().getSession(), petEntity));
             } else {
                 return;
             }
 
+            petEntity.getPetAI().waitForInteraction();
+            petEntity.cancelWalk();
             return;
         }
 
@@ -68,6 +63,6 @@ public class ScratchPetMessageEvent implements Event {
         client.getPlayer().getEntity().carryItem(999999999, 5);
         petEntity.getPetAI().onScratched();
 
-        client.getPlayer().getAchievements().progressAchievement(AchievementType.PET_RESPECT_GIVEN, 1);
+        client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_37, 1);
     }
 }

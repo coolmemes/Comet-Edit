@@ -39,11 +39,6 @@ public class MaintenanceCommand extends ChatCommand {
     public String getPermission() {
         return "maintenance_command";
     }
-    
-    @Override
-    public String getParameter() {
-        return "%hour% %minute%";
-    }
 
     @Override
     public String getDescription() {

@@ -2,9 +2,10 @@ package com.cometproject.server.game.navigator;
 
 import com.cometproject.server.game.navigator.types.Category;
 import com.cometproject.server.game.navigator.types.categories.NavigatorCategoryType;
+import com.cometproject.server.game.navigator.types.featured.FeaturedRoom;
 import com.cometproject.server.game.navigator.types.publics.PublicRoom;
 import com.cometproject.server.storage.queries.navigator.NavigatorDao;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
@@ -13,7 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 
-public class NavigatorManager implements Initialisable {
+public class NavigatorManager implements Initializable {
     private static NavigatorManager navigatorManagerInstance;
 
     private Map<Integer, Category> categories;
@@ -22,7 +23,7 @@ public class NavigatorManager implements Initialisable {
     private Map<Integer, PublicRoom> publicRooms;
     private Set<Integer> staffPicks;
 
-    private final Logger log = Logger.getLogger(NavigatorManager.class.getName());
+    Logger log = Logger.getLogger(NavigatorManager.class.getName());
 
     public NavigatorManager() {
     }
@@ -100,7 +101,13 @@ public class NavigatorManager implements Initialisable {
     }
 
     public Category getCategory(int id) {
-        return this.categories.get(id);
+        for (Category c : this.getCategories().values()) {
+            if (c.getId() == id) {
+                return c;
+            }
+        }
+
+        return null;
     }
 
     public boolean isStaffPicked(int roomId) {

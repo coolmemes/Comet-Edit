@@ -6,32 +6,36 @@ import com.cometproject.server.game.catalog.types.gifts.GiftData;
 import com.cometproject.server.game.groups.GroupManager;
 import com.cometproject.server.game.groups.types.GroupData;
 import com.cometproject.server.game.items.ItemManager;
+import com.cometproject.server.game.items.crackable.CrackableItem;
 import com.cometproject.server.game.items.types.ItemDefinition;
 import com.cometproject.server.game.players.PlayerManager;
 import com.cometproject.server.game.players.data.PlayerAvatar;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.pathfinding.AffectedTile;
+import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.items.data.BackgroundTonerData;
 import com.cometproject.server.game.rooms.objects.items.types.DefaultFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.AdjustableHeightFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.GiftFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.MagicStackFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.SoundMachineFloorItem;
+import com.cometproject.server.game.rooms.objects.items.types.floor.*;
 import com.cometproject.server.game.rooms.objects.items.types.floor.boutique.MannequinFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.football.FootballGateFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.groups.GroupFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.groups.GroupGateFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.WiredFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.highscore.HighscoreClassicFloorItem;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.highscore.HighscoreTeamFloorItem;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
+import com.cometproject.server.network.messages.outgoing.notification.HCRequiredNotificationMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.items.UpdateFloorItemMessageComposer;
+import com.cometproject.server.storage.queries.player.PlayerDao;
 import com.cometproject.server.storage.queries.rooms.RoomItemDao;
 import com.cometproject.server.storage.queue.types.ItemStorageQueue;
 import com.cometproject.server.utilities.attributes.Collidable;
+import com.cometproject.server.utilities.comporators.PositionComparator;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
 
+import java.util.Collections;
 import java.util.List;
 
 
@@ -41,13 +45,15 @@ public abstract class RoomItemFloor extends RoomItem implements Collidable {
     private ItemDefinition itemDefinition;
     private RoomEntity collidedEntity;
     private boolean hasQueuedSave;
+    private String coreState;
+    private boolean stateSwitched = false;
 
-    public RoomItemFloor(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
+    public RoomItemFloor(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
         super(id, new Position(x, y, z), room);
 
         this.itemId = itemId;
         this.ownerId = owner;
-        this.ownerName = ownerName;
+        this.ownerName = this.getRoom().getGroup() == null ? this.getRoom().getData().getOwner() : PlayerDao.getUsernameByPlayerId(this.ownerId);
         this.rotation = rotation;
         this.extraData = data;
     }
@@ -55,7 +61,7 @@ public abstract class RoomItemFloor extends RoomItem implements Collidable {
     public void serialize(IComposer msg, boolean isNew) {
         //final boolean isGift = false;
 
-        /*if (this.giftData != n    ull) {
+        /*if (this.giftData != null) {
             isGift = true;
         }*/
 
@@ -96,7 +102,7 @@ public abstract class RoomItemFloor extends RoomItem implements Collidable {
             msg.writeInt(0);
             msg.writeInt(1);
 
-            if (!extraData.equals("") && !extraData.equals("0")) {
+            if (!extraData.equals("")) {
                 String[] adsData = extraData.split(String.valueOf((char) 9));
                 int count = adsData.length;
 
@@ -184,38 +190,85 @@ public abstract class RoomItemFloor extends RoomItem implements Collidable {
                 msg.writeInt(0);
                 msg.writeInt(0);
             }
+        } else if(this instanceof CrackableFloorItem) {
+            if(this.getExtraData().length() == 0) {
+                this.extraData = "0";
+                this.saveData();
+            }
+
+            CrackableItem crackable = ItemManager.getInstance().getCrackableRewards(this.getDefinition().getId());
+            int actualTouch = Integer.valueOf(this.getExtraData());
+
+            msg.writeInt(0);
+
+            msg.writeInt(7);
+            msg.writeString("" + crackable.getCrackableState(actualTouch, this.getDefinition().getInteractionCycleCount()));
+            msg.writeInt(actualTouch);
+            msg.writeInt(crackable.getMaxTouch());
+        } else if (this.getDefinition().getInteraction().equals("clothing")) {
+            msg.writeInt(0);
+            msg.writeInt(0);
+            msg.writeString("0");
+        } else if (this instanceof SubscriptionGateFloorItem) {
+            msg.writeInt(0);
+            msg.writeInt(0);
+            msg.writeString(((SubscriptionGateFloorItem) this).isOpen ? "1" : "0");
         } else if (this.getDefinition().getItemName().contains("yttv") && this.hasAttribute("video")) {
             msg.writeInt(0);
             msg.writeInt(1);
             msg.writeInt(1);
             msg.writeString("THUMBNAIL_URL");
             msg.writeString("/deliver/" + this.getAttribute("video"));
-        } else if (this instanceof GroupFloorItem) {
-            GroupData groupData = GroupManager.getInstance().getData(((GroupFloorItem) this).getGroupId());
+        }  else if (this instanceof GroupFloorItem) {
+        GroupData groupData = GroupManager.getInstance().getData(((GroupFloorItem) this).getGroupId());
 
+        msg.writeInt(0);
+        if (groupData == null) {
+            msg.writeInt(2);
             msg.writeInt(0);
-            if (groupData == null) {
-                msg.writeInt(2);
-                msg.writeInt(0);
-            } else {
-                msg.writeInt(2);
-                msg.writeInt(5);
-                msg.writeString(this instanceof GroupGateFloorItem ? ((GroupGateFloorItem) this).isOpen ? "1" : "0" : "0");
-                msg.writeString(this.getExtraData());
-                msg.writeString(groupData.getBadge());
+        } else {
+            msg.writeInt(2);
+            msg.writeInt(5);
+            msg.writeString(this instanceof GroupGateFloorItem ? ((GroupGateFloorItem) this).isOpen ? "1" : "0" : "0");
+            msg.writeString(this.getExtraData());
+            msg.writeString(groupData.getBadge());
 
-                String colourA = GroupManager.getInstance().getGroupItems().getSymbolColours().get(groupData.getColourA()) != null ? GroupManager.getInstance().getGroupItems().getSymbolColours().get(groupData.getColourA()).getColour() : "ffffff";
-                String colourB = GroupManager.getInstance().getGroupItems().getBackgroundColours().get(groupData.getColourB()) != null ? GroupManager.getInstance().getGroupItems().getBackgroundColours().get(groupData.getColourB()).getColour() : "ffffff";
+            String colourA = GroupManager.getInstance().getGroupItems().getSymbolColours().get(groupData.getColourA()) != null ? GroupManager.getInstance().getGroupItems().getSymbolColours().get(groupData.getColourA()).getColour() : "ffffff";
+            String colourB = GroupManager.getInstance().getGroupItems().getBackgroundColours().get(groupData.getColourB()) != null ? GroupManager.getInstance().getGroupItems().getBackgroundColours().get(groupData.getColourB()).getColour() : "ffffff";
 
-                msg.writeString(colourA);
-                msg.writeString(colourB);
-            }
+            msg.writeString(colourA);
+            msg.writeString(colourB);
+        }
 
-        } else if (this instanceof HighscoreClassicFloorItem) {
+    } else if (this instanceof HighscoreClassicFloorItem) {
             msg.writeInt(0);
 
             ((HighscoreClassicFloorItem) this).composeHighscoreData(msg);
-        } else if (this.getLimitedEditionItemData() != null) {
+        } else if(this instanceof HighscoreTeamFloorItem) {
+            msg.writeInt(0);
+
+            ((HighscoreTeamFloorItem) this).composeHighscoreData(msg);
+        } else if(this instanceof ProviderTileFloorItem) {
+            msg.writeInt(0);
+            msg.writeInt(1);
+            msg.writeInt(2);
+
+            //TODO: improve it
+            String[] values = this.getExtraData().replace("state", "").split("effectId");
+
+            msg.writeString("state");
+            msg.writeString(values[0].trim());
+            msg.writeString("effectId");
+            msg.writeString(values[1].trim().replace("\t", ""));
+        }else if(this instanceof RoomLinkProviderFloorItem) {
+            msg.writeInt(0);
+            msg.writeInt(1);
+            msg.writeInt(1);
+            msg.writeString("internalLink");
+            msg.writeString(this.getExtraData().split("internalLink")[1].replace("\t", ""));
+
+            System.out.println(this.getExtraData().split("internalLink")[1].replace("\t", ""));
+        }else if (this.getLimitedEditionItemData() != null) {
             msg.writeInt(0);
             msg.writeString("");
             msg.writeBoolean(true);
@@ -229,12 +282,22 @@ public abstract class RoomItemFloor extends RoomItem implements Collidable {
             msg.writeInt(0);
 
             //msg.writeString(isGift ? giftData.toString() : this.getExtraData());
-            msg.writeString((this instanceof FootballGateFloorItem) ? "" : (this instanceof WiredFloorItem) ? ((WiredFloorItem) this).getState()? "1" : "0" : (this instanceof SoundMachineFloorItem) ? ((SoundMachineFloorItem) this).getState() ? "1" : "0" : this.getExtraData());
+            msg.writeString((this instanceof FootballGateFloorItem) ? "" : (this instanceof WiredFloorItem) ? "0" : (this instanceof SoundMachineFloorItem) ? ((SoundMachineFloorItem) this).getState() ? "1" : "0" : this.getExtraData());
         }
 
         msg.writeInt(-1);
         //msg.writeInt(!this.getDefinition().getInteraction().equals("default") ? 1 : 0);
-        msg.writeInt(!(this instanceof DefaultFloorItem) && !(this instanceof SoundMachineFloorItem) ? 1 : 0);
+        int useButtonMode = 0;
+
+        if(this.getDefinition().getInteractionCycleCount() == 0) {
+            useButtonMode = 0;
+        } else if(!this.getDefinition().requiresRights()) {
+            useButtonMode = 2;
+        } else if(this.getDefinition().getInteractionCycleCount() > 0) {
+            useButtonMode = 1;
+        }
+
+        msg.writeInt(useButtonMode);
         msg.writeInt(this.ownerId);
 
         if (isNew)
@@ -263,10 +326,6 @@ public abstract class RoomItemFloor extends RoomItem implements Collidable {
     }
 
     public void onEntityStepOn(RoomEntity entity) {
-        // override me
-    }
-
-    public void onEntityPostStepOn(RoomEntity entity) {
         // override me
     }
 
@@ -386,6 +445,29 @@ public abstract class RoomItemFloor extends RoomItem implements Collidable {
         return null;
     }
 
+    public PlayerEntity nearestPlayerEntity() {
+        PositionComparator positionComporator = new PositionComparator(this);
+
+        List<PlayerEntity> nearestEntities = this.getRoom().getEntities().getPlayerEntities();
+
+        Collections.sort(nearestEntities, positionComporator);
+
+        for (PlayerEntity playerEntity : nearestEntities) {
+            if (playerEntity.getTile().isReachable(this)) {
+                return playerEntity;
+            }
+        }
+
+        return null;
+    }
+
+    public void tempState(int state) {
+        this.stateSwitched = true;
+        this.coreState = this.extraData;
+        this.setExtraData(state);
+        this.sendUpdate();
+    }
+
     public RoomEntity getCollision() {
         return this.collidedEntity;
     }
@@ -410,12 +492,18 @@ public abstract class RoomItemFloor extends RoomItem implements Collidable {
         return this.extraData;
     }
 
+    public double getHeight() { return getPosition().getZ(); }
+
     public void setRotation(int rot) {
         this.rotation = rot;
     }
 
     public void setExtraData(String data) {
         this.extraData = data;
+    }
+
+    public void setExtraData(Integer i) {
+        this.extraData = "" + i;
     }
 
     public boolean hasQueuedSave() {

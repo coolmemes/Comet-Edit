@@ -4,9 +4,9 @@ import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerAtGivenTime;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerAtGivenTimeLong;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerPeriodically;
 import com.cometproject.server.game.rooms.types.Room;
 
 import java.util.List;
@@ -26,8 +26,8 @@ public class WiredActionResetTimers extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionResetTimers(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionResetTimers(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -41,13 +41,28 @@ public class WiredActionResetTimers extends WiredActionItem {
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
-        final List<WiredTriggerAtGivenTime> items = this.getRoom().getItems().getByClass(WiredTriggerAtGivenTime.class);
+    public boolean evaluate(RoomEntity entity, Object data) {
+        if (this.getWiredData().getDelay() >= 1) {
+            this.setTicks(RoomItemFactory.getProcessTime(this.getWiredData().getDelay() / 2));
+        } else {
+            this.onTickComplete();
+        }
 
+        return true;
+    }
+
+    public void onTickComplete() {
+        final List<RoomItemFloor> items = this.getRoom().getItems().getByClass(WiredTriggerAtGivenTime.class);
         items.addAll(this.getRoom().getItems().getByClass(WiredTriggerAtGivenTimeLong.class));
 
-        for (WiredTriggerAtGivenTime floorItem : items) {
-            floorItem.setNeedsReset(false);
+        for (RoomItemFloor floorItem : items) {
+            if (floorItem instanceof WiredTriggerAtGivenTime) {
+                ((WiredTriggerAtGivenTime) floorItem).setNeedsReset(false);
+            } else if(floorItem instanceof WiredTriggerAtGivenTimeLong) {
+                ((WiredTriggerAtGivenTimeLong) floorItem).setNeedsReset(false);
+            } else if(floorItem instanceof WiredTriggerPeriodically) {
+                ((WiredTriggerPeriodically) floorItem).disableTicks();
+            }
         }
 
         this.getRoom().resetWiredTimer();

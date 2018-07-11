@@ -11,6 +11,8 @@ import java.sql.SQLException;
 
 public class StatisticsDao {
     public static void saveStatistics(int players, int rooms, String version, int onlineRecord) {
+        if(Comet.isDebugging) { return; }
+
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
 
@@ -34,6 +36,8 @@ public class StatisticsDao {
     }
 
     public static void saveStatistics(int players, int rooms, String version) {
+        if(Comet.isDebugging) { return; }
+
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
 

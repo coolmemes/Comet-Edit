@@ -10,13 +10,12 @@ import com.cometproject.server.network.sessions.Session;
 public class InitializeFriendListMessageEvent implements Event {
     @Override
     public void handle(Session client, MessageEvent msg) throws Exception {
-        client.send(new BuddyListMessageComposer(client.getPlayer(), client.getPlayer().getMessenger().getFriends(), client.getPlayer().getPermissions().getRank().messengerStaffChat(), client.getPlayer().getGroups()));
+        client.send(new BuddyListMessageComposer(client.getPlayer(), client.getPlayer().getMessenger().getFriends(), client.getPlayer().getPermissions().getRank().messengerStaffChat()));
         client.send(new FriendRequestsMessageComposer(client.getPlayer().getMessenger().getRequestAvatars()));
 
-        if(!client.getPlayer().getAchievements().hasStartedAchievement(AchievementType.FRIENDS_LIST)) {
-            client.getPlayer().getAchievements().progressAchievement(AchievementType.FRIENDS_LIST, client.getPlayer().getMessenger().getFriends().size());
+
+        if(!client.getPlayer().getAchievements().hasStartedAchievement(AchievementType.ACH_23)) {
+            client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_23, client.getPlayer().getMessenger().getFriends().size());
         }
-        
-        client.getPlayer().getMessenger().setInitialised(true);
     }
 }

@@ -6,12 +6,12 @@ import com.cometproject.server.game.rooms.objects.entities.pathfinding.types.Ite
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerCollision;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.game.rooms.types.mapping.RoomTile;
 import com.cometproject.server.network.messages.outgoing.room.items.SlideObjectBundleMessageComposer;
+import com.cometproject.server.utilities.RandomUtil;
 import com.google.common.collect.Maps;
 
 import java.util.Iterator;
@@ -34,8 +34,8 @@ public class WiredActionFlee extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionFlee(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionFlee(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -49,9 +49,9 @@ public class WiredActionFlee extends WiredActionItem {
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
+    public boolean evaluate(RoomEntity entity, Object data) {
         if (getWiredData().getSelectedIds().size() == 0) {
-            return;
+            return false;
         }
 
         for (Iterator localIterator = getWiredData().getSelectedIds().iterator(); localIterator.hasNext(); ) {
@@ -80,7 +80,10 @@ public class WiredActionFlee extends WiredActionItem {
                 }
             }
         }
+
+        return true;
     }
+
 
     public boolean isCollided(PlayerEntity entity, RoomItemFloor floorItem) {
         boolean tilesTouching = entity.getPosition().touching(floorItem.getPosition());
@@ -120,18 +123,33 @@ public class WiredActionFlee extends WiredActionItem {
             getRoom().getEntities().broadcastMessage(new SlideObjectBundleMessageComposer(from, to, 0, 0, items));
         }
 
-        PlayerEntity nearestEntity = floorItem.nearestPlayerEntity();
-        if ((nearestEntity != null) &&
-                (isCollided(nearestEntity, floorItem))) {
-            floorItem.setCollision(nearestEntity);
-            WiredTriggerCollision.executeTriggers(nearestEntity);
+
+        for (int collisionDirection : Position.COLLIDE_TILES) {
+            final Position collisionPosition = floorItem.getPosition().squareInFront(collisionDirection);
+            final RoomTile collisionTile = this.getRoom().getMapping().getTile(collisionPosition);
+
+            if (collisionTile != null) {
+                final RoomEntity entity = collisionTile.getEntity();
+
+                if (entity != null) {
+                    floorItem.setCollision(entity);
+                    WiredTriggerCollision.executeTriggers(entity, floorItem);
+                }
+            }
         }
+//
+//        PlayerEntity nearestEntity = floorItem.nearestPlayerEntity();
+//        if ((nearestEntity != null) &&
+//                (isCollided(nearestEntity, floorItem))) {
+//            floorItem.setCollision(nearestEntity);
+//            WiredTriggerCollision.executeTriggers(nearestEntity, floorItem);
+//        }
 
         floorItem.nullifyCollision();
     }
 
     private Position random(RoomItemFloor floorItem, Position from) {
-        int randomDirection = com.cometproject.server.utilities.RandomInteger.getRandom(0, 3) * 2;
+        int randomDirection = RandomUtil.getRandomInt(0, 3) * 2;
         Position newPosition = from.squareBehind(randomDirection);
         RoomTile tile = floorItem.getRoom().getMapping().getTile(newPosition.getX(), newPosition.getY());
 

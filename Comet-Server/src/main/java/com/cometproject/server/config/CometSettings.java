@@ -14,10 +14,12 @@ public class CometSettings {
     public static String hotelName = "";
     public static String hotelUrl = "";
     public static String aboutImg = "";
+    public static String eventImg = "";
 
     public static boolean onlineRewardEnabled = false;
     public static int onlineRewardCredits = 0;
     public static int onlineRewardDuckets = 0;
+    public static int onlineRewardDiamonds = 0;
     public static int onlineRewardInterval = 15;
 
     public static int groupCost = 0;
@@ -37,6 +39,7 @@ public class CometSettings {
     public static int roomMaxBots = 15;
     public static int roomMaxPets = 15;
     public static int roomIdleMinutes = 20;
+    public static int roomGameIdleSeconds = 10;
 
     public static FilterMode wordFilterMode = FilterMode.DEFAULT;
 
@@ -54,8 +57,9 @@ public class CometSettings {
 
     public static boolean messengerLogMessages = false;
     public static int cameraPhotoItemId = 50001;
+    public static int furniMaticBoxItemId = 4692;
 
-    public static String cameraPhotoUrl = "http://localhost/photos/photos/%photoId%.png";
+    public static String cameraPhotoUrl = "";
     public static int roomWiredRewardMinimumRank = 7;
     public static boolean asyncCatalogPurchase = false;
 
@@ -64,17 +68,23 @@ public class CometSettings {
 
     public static boolean adaptiveEntityProcessDelay = false;
 
-    public static int maxConnectionsPerIpAddress = 2;
-
-    public static boolean playerRightsItemPlacement = true;
-
-    public static boolean groupChatEnabled = false;
-    public static boolean logCatalogPurchases = false;
-
     public static boolean hallOfFameEnabled = false;
     public static String hallOfFameCurrency = "";
     public static int hallOfFameRefreshMinutes = 5;
     public static String hallOfFameTextsKey = "";
+
+    public static String defaultMarketplaceCoin = "credits";
+    public static String defaultMarketplaceType = "all";
+
+    public static int competitionCampaignId = 1;
+    public static String competitionCampaignName = "";
+    public static boolean competitionCampaignEnabled = true;
+
+    public static int maxSeasonalRewardPoints = 1;
+    public static int minRankPinCodeRequired = 1;
+    public static int clubPresentPageID = 8;
+
+    public static boolean eventWinnerNotification = false;
 
     private static final Logger log = Logger.getLogger(CometSettings.class.getName());
 

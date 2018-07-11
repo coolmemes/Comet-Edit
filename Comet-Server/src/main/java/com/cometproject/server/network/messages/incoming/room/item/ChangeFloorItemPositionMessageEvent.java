@@ -1,5 +1,7 @@
 package com.cometproject.server.network.messages.incoming.room.item;
 
+import com.cometproject.server.config.CometSettings;
+import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.server.game.quests.types.QuestType;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
@@ -8,6 +10,7 @@ import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.notification.NotificationMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.items.UpdateFloorItemMessageComposer;
+import com.cometproject.server.network.messages.outgoing.user.verification.EmailVerificationWindowMessageComposer;
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.network.sessions.Session;
 import com.google.common.collect.Maps;
@@ -20,6 +23,12 @@ public class ChangeFloorItemPositionMessageEvent implements Event {
     private static Logger log = Logger.getLogger(ChangeFloorItemPositionMessageEvent.class);
 
     public void handle(Session client, MessageEvent msg) {
+        if(client.getPlayer().getData().getRank() >= CometSettings.minRankPinCodeRequired && !client.getPlayer().pinSuccess()) {
+            client.getPlayer().sendBubble("pincode", Locale.getOrDefault("pin.code.required", "You need to verify your Pin code before making any action."));
+            client.send(new EmailVerificationWindowMessageComposer(1,1));
+            return;
+        }
+
         Long id = ItemManager.getInstance().getItemIdByVirtualId(msg.readInt());
 
         if(id == null) {

@@ -27,7 +27,6 @@ public class MessengerComponent implements PlayerComponent {
     private Map<Integer, MessengerFriend> friends;
 
     private List<Integer> requests;
-    private boolean initialised;
 
     public MessengerComponent(Player player) {
         this.player = player;
@@ -75,7 +74,7 @@ public class MessengerComponent implements PlayerComponent {
     public void addFriend(MessengerFriend friend) {
         this.getFriends().put(friend.getUserId(), friend);
 
-        this.getPlayer().getAchievements().progressAchievement(AchievementType.FRIENDS_LIST, 1);
+        this.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_23, 1);
     }
 
     public void removeFriend(int userId) {
@@ -107,7 +106,7 @@ public class MessengerComponent implements PlayerComponent {
 
             Session session = NetworkManager.getInstance().getSessions().getByPlayerId(friend.getUserId());
 
-            if (session != null && session.getPlayer().getMessenger().isInitialised())
+            if (session != null)
                 session.send(msg);
         }
     }
@@ -165,7 +164,7 @@ public class MessengerComponent implements PlayerComponent {
     }
 
     public void sendOffline(int friend, boolean online, boolean inRoom) {
-        this.getPlayer().getSession().send(new UpdateFriendStateMessageComposer(PlayerManager.getInstance().getAvatarByPlayerId(friend, PlayerAvatar.USERNAME_FIGURE_MOTTO), online, inRoom, this.getPlayer().getRelationships().get(friend)));
+        this.getPlayer().getSession().send(new UpdateFriendStateMessageComposer(PlayerManager.getInstance().getAvatarByPlayerId(friend, PlayerAvatar.USERNAME_FIGURE_MOTTO), online, inRoom));
     }
 
     public void sendStatus(boolean online, boolean inRoom) {
@@ -177,16 +176,7 @@ public class MessengerComponent implements PlayerComponent {
             return;
         }
 
-        for (MessengerFriend friend : this.getFriends().values()) {
-            if (!friend.isOnline() || friend.getUserId() == this.getPlayer().getId()) {
-                continue;
-            }
-
-            Session session = NetworkManager.getInstance().getSessions().getByPlayerId(friend.getUserId());
-
-            if (session != null && session.getPlayer().getMessenger().isInitialised())
-                session.send(new UpdateFriendStateMessageComposer(this.getPlayer().getData(), online, inRoom, session.getPlayer().getRelationships().get(this.getPlayer().getId())));
-        }
+        this.broadcast(new UpdateFriendStateMessageComposer(this.getPlayer().getData(), online, inRoom));
     }
 
     public MessengerFriend getFriendById(int id) {
@@ -209,11 +199,4 @@ public class MessengerComponent implements PlayerComponent {
         this.requests.remove(request);
     }
 
-    public void setInitialised(boolean initialised) {
-        this.initialised = initialised;
-    }
-
-    public boolean isInitialised() {
-        return initialised;
-    }
 }

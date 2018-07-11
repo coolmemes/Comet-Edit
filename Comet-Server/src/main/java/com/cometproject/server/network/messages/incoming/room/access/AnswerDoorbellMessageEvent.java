@@ -52,9 +52,11 @@ public class AnswerDoorbellMessageEvent implements Event {
             return;
         }
 
+        client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(new DoorbellAcceptedComposer(username), true);
+
         if (answered) {
             requestingClient.getPlayer().getEntity().setDoorbellAnswered(true);
-            requestingClient.send(new DoorbellAcceptedComposer());
+            requestingClient.send(new DoorbellAcceptedComposer(""));
         } else {
             requestingClient.send(new DoorbellNoAnswerComposer());
             requestingClient.send(new HotelViewMessageComposer());

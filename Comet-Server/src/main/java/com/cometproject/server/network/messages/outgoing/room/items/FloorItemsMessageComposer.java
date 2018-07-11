@@ -4,11 +4,14 @@ import com.cometproject.api.networking.messages.IComposer;
 import com.cometproject.server.game.groups.types.Group;
 import com.cometproject.server.game.groups.types.GroupMember;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.WiredFloorItem;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.protocol.headers.Composers;
 import com.cometproject.server.storage.queries.player.PlayerDao;
+import com.google.common.collect.Lists;
 
+import java.util.List;
 import java.util.Map;
 
 
@@ -27,49 +30,40 @@ public class FloorItemsMessageComposer extends MessageComposer {
     @Override
     public void compose(IComposer msg) {
         if (room.getItems().getFloorItems().size() > 0) {
-            //if (room.getGroup() == null) {
             msg.writeInt(room.getItems().getItemOwners().size());
 
-            for (Map.Entry<Integer, String> itemOwner : room.getItems().getItemOwners().entrySet()) {
+            for (Map.Entry<Integer, Integer> itemOwner : room.getItems().getItemOwners().entrySet()) {
                 msg.writeInt(itemOwner.getKey());
-                msg.writeString(itemOwner.getValue());
+                msg.writeString(PlayerDao.getUsernameByPlayerId(itemOwner.getValue()));
             }
-            ;
-           /* } else {
-                final Group group = room.getGroup();
 
-                if (group.getData().canMembersDecorate()) {
-                    msg.writeInt(group.getMembershipComponent().getMembers().size() + 1);
+            if (room.getData().isWiredHidden()) {
+                List<RoomItemFloor> items = Lists.newArrayList();
 
-                    msg.writeInt(room.getData().getOwnerId());
-                    msg.writeString(room.getData().getOwner());
-
-                    for (GroupMember groupMember : group.getMembershipComponent().getMembers().values()) {
-                        msg.writeInt(groupMember.getPlayerId());
-                        msg.writeString(PlayerDao.getUsernameByPlayerId(groupMember.getPlayerId()));
-                    }
-                } else {
-                    msg.writeInt(group.getMembershipComponent().getAdministrators().size() + 1);
-
-                    msg.writeInt(room.getData().getOwnerId());
-                    msg.writeString(room.getData().getOwner());
-
-                    for (Integer groupMember : group.getMembershipComponent().getAdministrators()) {
-                        msg.writeInt(groupMember);
-                        msg.writeString(PlayerDao.getUsernameByPlayerId(groupMember));
+                for (RoomItemFloor item : room.getItems().getFloorItems().values()) {
+                    if (!(item instanceof WiredFloorItem)) {
+                        items.add(item);
                     }
                 }
-            }*/
 
-            msg.writeInt(room.getItems().getFloorItems().size());
+                msg.writeInt(items.size());
 
-            for (RoomItemFloor item : room.getItems().getFloorItems().values()) {
-                item.serialize((msg));
+                for (RoomItemFloor item : items) {
+                    item.serialize(msg);
+                }
+            } else {
+                msg.writeInt(room.getItems().getFloorItems().size());
+
+                for (RoomItemFloor item : room.getItems().getFloorItems().values()) {
+                    item.serialize((msg));
+                }
             }
+
         } else {
             msg.writeInt(0);
             msg.writeInt(0);
         }
+
 
     }
 }

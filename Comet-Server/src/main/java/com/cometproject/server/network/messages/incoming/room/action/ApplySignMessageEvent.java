@@ -37,9 +37,8 @@ public class ApplySignMessageEvent implements Event {
 
             client.getPlayer().setRoomLastMessageTime(time);
         }
-        
-        // / UnIdle the entity
-        client.getPlayer().getEntity().unIdle();
+
+        if(!client.getPlayer().getEntity().getRoom().hasGameRoom()) client.getPlayer().getEntity().unIdle();
 
         // Add the sign status
         client.getPlayer().getEntity().addStatus(RoomEntityStatus.SIGN, String.valueOf(msg.readInt()));

@@ -1,24 +1,22 @@
 package com.cometproject.server.game.rooms.objects.items;
 
 import com.cometproject.api.networking.messages.IComposer;
+import com.cometproject.server.boot.Comet;
 import com.cometproject.server.game.items.rares.LimitedEditionItemData;
 import com.cometproject.server.game.items.types.ItemDefinition;
 import com.cometproject.server.game.items.types.LowPriorityItemProcessor;
 import com.cometproject.server.game.rooms.objects.BigRoomFloorObject;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
-import com.cometproject.server.game.rooms.objects.items.types.AdvancedFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.RollableFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.RollerFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.banzai.BanzaiTeleporterFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.WiredFloorItem;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerPeriodically;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerPeriodicallyLong;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.utilities.attributes.Attributable;
-import com.google.common.collect.Sets;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 
 public abstract class RoomItem extends BigRoomFloorObject implements Attributable {
@@ -30,7 +28,7 @@ public abstract class RoomItem extends BigRoomFloorObject implements Attributabl
 
     protected int ticksTimer;
 
-    private final Set<Long> wiredItems = Sets.newHashSet();
+    private int moveDirection = -1;
 
     private LimitedEditionItemData limitedEditionItemData;
     private Map<String, Object> attributes;
@@ -38,10 +36,6 @@ public abstract class RoomItem extends BigRoomFloorObject implements Attributabl
     public RoomItem(long id, Position position, Room room) {
         super(id, position, room);
         this.ticksTimer = -1;
-    }
-
-    public Set<Long> getWiredItems() {
-        return this.wiredItems;
     }
 
     public void setLimitedEditionItemData(LimitedEditionItemData limitedEditionItemData) {
@@ -61,7 +55,7 @@ public abstract class RoomItem extends BigRoomFloorObject implements Attributabl
     }
 
     public final boolean requiresTick() {
-        return this.hasTicks() || this instanceof WiredFloorItem || this instanceof AdvancedFloorItem || this instanceof RollerFloorItem;
+        return this.hasTicks() || this instanceof WiredFloorItem;
     }
 
     protected final boolean hasTicks() {
@@ -69,9 +63,14 @@ public abstract class RoomItem extends BigRoomFloorObject implements Attributabl
     }
 
     protected final void setTicks(int time) {
+        if(!(this instanceof WiredTriggerPeriodically) && !(this instanceof WiredTriggerPeriodicallyLong) && this instanceof WiredFloorItem && !Comet.allowToUseDelayOnWireds) {
+            this.onTickComplete();
+            return;
+        }
+
         this.ticksTimer = time;
 
-        if (this instanceof RollableFloorItem || this instanceof BanzaiTeleporterFloorItem) {
+        if (this instanceof RollableFloorItem) {
             LowPriorityItemProcessor.getInstance().submit(((RoomItemFloor) this));
         }
     }
@@ -190,7 +189,11 @@ public abstract class RoomItem extends BigRoomFloorObject implements Attributabl
         return limitedEditionItemData;
     }
 
-    public String getOwnerName() {
-        return this.ownerName;
+    public int getMoveDirection() {
+        return moveDirection;
+    }
+
+    public void setMoveDirection(int moveDirection) {
+        this.moveDirection = moveDirection;
     }
 }

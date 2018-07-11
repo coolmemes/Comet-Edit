@@ -5,11 +5,7 @@ import com.cometproject.api.game.players.data.components.PlayerInventory;
 import com.cometproject.api.networking.sessions.BaseSession;
 import com.cometproject.server.boot.Comet;
 import com.cometproject.server.config.CometSettings;
-import com.cometproject.server.game.catalog.types.CatalogItem;
-import com.cometproject.server.game.guides.GuideManager;
-import com.cometproject.server.game.guides.types.HelpRequest;
-import com.cometproject.server.game.guides.types.HelperSession;
-import com.cometproject.server.game.players.PlayerManager;
+import com.cometproject.server.game.items.crafting.CraftingMachine;
 import com.cometproject.server.game.players.components.*;
 import com.cometproject.server.game.players.data.PlayerData;
 import com.cometproject.server.game.quests.QuestManager;
@@ -22,23 +18,23 @@ import com.cometproject.server.game.rooms.types.components.types.ChatMessageColo
 import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.AdvancedAlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.MotdNotificationMessageComposer;
+import com.cometproject.server.network.messages.outgoing.notification.NotificationMessageComposer;
 import com.cometproject.server.network.messages.outgoing.quests.QuestStartedMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.UpdateInfoMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.engine.HotelViewMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.purse.CurrenciesMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.purse.SendCreditsMessageComposer;
 import com.cometproject.server.network.sessions.Session;
-import com.cometproject.server.storage.queries.catalog.CatalogDao;
 import com.cometproject.server.storage.queries.groups.GroupDao;
 import com.cometproject.server.storage.queries.player.PlayerDao;
 import com.cometproject.server.storage.queue.types.PlayerDataStorageQueue;
-import com.cometproject.server.utilities.collections.ConcurrentHashSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Player implements BasePlayer {
 
@@ -51,10 +47,8 @@ public class Player implements BasePlayer {
     private PlayerEntity entity;
     private Session session;
 
-    private HelperSession helperSession;
-
     private final PermissionComponent permissions;
-    private final InventoryComponent inventory;
+    private final Inventory inventory;
     private final SubscriptionComponent subscription;
     private final MessengerComponent messenger;
     private final RelationshipComponent relationships;
@@ -62,7 +56,6 @@ public class Player implements BasePlayer {
     private final PetComponent pets;
     private final QuestComponent quests;
     private final AchievementComponent achievements;
-    private final NavigatorComponent navigator;
 
     private List<Integer> rooms = new ArrayList<>();
     private List<Integer> enteredRooms = new ArrayList<>();
@@ -76,27 +69,35 @@ public class Player implements BasePlayer {
 
     private long lastRoomRequest = 0;
     private long lastBadgeUpdate = 0;
+    private long lastActionRequest = 0;
     private int lastFigureUpdate = 0;
+
+    private boolean pinSuccess = false;
+    private int pinTries = 0;
+
+    private int lastPhotoId = 0;
+    private long lastPhotoTime = 0;
+    private String lastPhotoHash;
+    private boolean lastPhotoPreview = false;
 
     private int roomFloodFlag = 0;
     private long messengerLastMessageTime = 0;
 
+    private int lastVoucherRedeemAttempt = 0;
+    private int voucherRedeemAttempts = 0;
+
     private double messengerFloodTime = 0;
     private int messengerFloodFlag = 0;
-
-    private boolean usernameConfirmed = false;
 
     private long teleportId = 0;
     private int teleportRoomId = 0;
     private String lastMessage = "";
 
-    private int lastVoucherRedeemAttempt = 0;
-    private int voucherRedeemAttempts = 0;
-
     private int notifCooldown = 0;
     private int lastRoomId;
 
     private int lastGift = 0;
+    private CraftingMachine lastCraftingMachine;
 
     private int lastRoomCreated = 0;
     public boolean cancelPageOpen = false;
@@ -113,25 +114,15 @@ public class Player implements BasePlayer {
 
     private boolean invisible = false;
 
+    private String performance = "";
+
+    private ChatMessageColour chatMessageColour = null;
+
     private int lastTradePlayer = 0;
     private long lastTradeTime = 0;
     private int lastTradeFlag = 0;
 
     private int lastTradeFlood = 0;
-
-    private long lastPhotoTaken = 0;
-
-    private String ssoTicket;
-
-    public int lastBannedListRequest = 0;
-
-    private Set<CatalogItem> recentPurchases;
-
-    private Set<String> eventLogCategories = Sets.newConcurrentHashSet();
-
-    private ChatMessageColour chatMessageColour = null;
-
-    private HelpRequest helpRequest = null;
 
     public Player(ResultSet data, boolean isFallback) throws SQLException {
         this.id = data.getInt("playerId");
@@ -151,7 +142,7 @@ public class Player implements BasePlayer {
         }
 
         this.permissions = new PermissionComponent(this);
-        this.inventory = new InventoryComponent(this);
+        this.inventory = new Inventory(this);
         this.messenger = new MessengerComponent(this);
         this.subscription = new SubscriptionComponent(this);
         this.relationships = new RelationshipComponent(this);
@@ -159,7 +150,6 @@ public class Player implements BasePlayer {
         this.pets = new PetComponent(this);
         this.quests = new QuestComponent(this);
         this.achievements = new AchievementComponent(this);
-        this.navigator = new NavigatorComponent(this);
 
         this.groups = GroupDao.getIdsByPlayerId(this.id);
 
@@ -178,11 +168,6 @@ public class Player implements BasePlayer {
             }
         }
 
-        if(this.helperSession != null) {
-            GuideManager.getInstance().finishPlayerDuty(this.helperSession);
-            this.helperSession = null;
-        }
-
         if (PlayerDataStorageQueue.getInstance().isQueued(this.getData())) {
             this.data.saveNow();
             PlayerDataStorageQueue.getInstance().unqueue(this.getData());
@@ -194,9 +179,6 @@ public class Player implements BasePlayer {
         this.getMessenger().dispose();
         this.getRelationships().dispose();
         this.getQuests().dispose();
-        this.getNavigator().dispose();
-
-        PlayerManager.getInstance().getSsoTicketToPlayerId().remove(this.ssoTicket);
 
         this.session.getLogger().debug(this.getData().getUsername() + " logged out");
 
@@ -214,16 +196,12 @@ public class Player implements BasePlayer {
         this.enteredRooms.clear();
         this.enteredRooms = null;
 
-        this.eventLogCategories.clear();
-        this.eventLogCategories = null;
-
-        this.recentPurchases.clear();
-        this.recentPurchases = null;
-
         this.settings = null;
         this.data = null;
 
         this.isDisposed = true;
+
+
     }
 
     @Override
@@ -235,6 +213,14 @@ public class Player implements BasePlayer {
     @Override
     public void sendNotif(String title, String message) {
         session.send(new AdvancedAlertMessageComposer(title, message));
+    }
+
+    public void sendBubble(String image, String message) {
+        session.send(new NotificationMessageComposer(image, message, ""));
+    }
+
+    public void sendInteractiveBubble(String image, String message, String action) {
+        session.send(new NotificationMessageComposer(image, message, action));
     }
 
     @Override
@@ -254,17 +240,13 @@ public class Player implements BasePlayer {
         currencies.put(0, CometSettings.playerInfiniteBalance ? com.cometproject.server.game.players.types.Player.INFINITE_BALANCE : getData().getActivityPoints());
         currencies.put(105, getData().getVipPoints());
         currencies.put(5, getData().getVipPoints());
+        currencies.put(103, getData().getSeasonalPoints());
 
         return new CurrenciesMessageComposer(currencies);
     }
 
     @Override
     public void loadRoom(int id, String password) {
-        if(!this.usernameConfirmed) {
-            session.send(new HotelViewMessageComposer());
-            return;
-        }
-
         if (entity != null && entity.getRoom() != null) {
             entity.leaveRoom(true, false, false);
             setEntity(null);
@@ -288,9 +270,7 @@ public class Player implements BasePlayer {
         PlayerEntity playerEntity = room.getEntities().createEntity(this);
         setEntity(playerEntity);
 
-        if(!playerEntity.joinRoom(room, password)) {
-            setEntity(null);
-        }
+        playerEntity.joinRoom(room, password);
 
         if (this.getData().getQuestId() != 0) {
             Quest quest = QuestManager.getInstance().getById(this.getData().getQuestId());
@@ -319,6 +299,61 @@ public class Player implements BasePlayer {
         }
     }
 
+    public String getNameColorAndAltCode() {
+        String username = this.getData().getUsername();
+        if (this.getData().getNameAltCode() != null && this.getData().getNameColorCode() != null) {
+            return "<font color='" + this.getData().getNameColorCode() + "'>" + replaceNameAltCodes(this.getData().getNameAltCode()) + " " + this.getData().getUsername() + "</font>";
+        }
+        if (this.getData().getNameColorCode() != null && this.getData().getNameAltCode() == null) {
+            return "<font color='" + this.getData().getNameColorCode() + "'>" + this.getData().getUsername() + "</font>";
+        }
+        if (this.getData().getNameColorCode() == null && this.getData().getNameAltCode() != null) {
+            return replaceNameAltCodes(this.getData().getNameAltCode()) + " " + this.getData().getUsername();
+        }
+        if (this.getData().getNameAltCode() == null && this.getData().getNameColorCode() == null) {
+            return username;
+        }
+        return username;
+    }
+
+    public String replaceNameAltCodes(String code) {
+        switch (code) {
+            case "0145":
+                return "‘";
+            case "0131":
+                return "ƒ";
+            case "0135":
+                return "‡";
+            case "0149":
+                return "•";
+            case "0150":
+                return "·";
+            case "0151":
+                return "—";
+            case "0153":
+                return "™";
+            case "0155":
+                return "|";
+            case "0165":
+                return "¥";
+            case "0181":
+                return "µ";
+            case "0172":
+                return "¬";
+            case "0185":
+                return "º";
+            case "0187":
+                return "»";
+            case "0170":
+                return "ª";
+            case "0134":
+                return "€";
+            case "0190":
+                return "±";
+        }
+        return "";
+    }
+
     @Override
     public void ignorePlayer(int playerId) {
         if (this.ignoredPlayers == null) {
@@ -336,6 +371,14 @@ public class Player implements BasePlayer {
     @Override
     public boolean ignores(int playerId) {
         return this.ignoredPlayers != null && this.ignoredPlayers.contains(playerId);
+    }
+
+    public ChatMessageColour getChatMessageColour() {
+        return chatMessageColour;
+    }
+
+    public void setChatMessageColour(ChatMessageColour chatMessageColour) {
+        this.chatMessageColour = chatMessageColour;
     }
 
     @Override
@@ -457,6 +500,14 @@ public class Player implements BasePlayer {
         this.roomLastMessageTime = roomLastMessageTime;
     }
 
+    public void setLastActionRequest(long lastActionRequest) {
+        this.lastActionRequest = lastActionRequest;
+    }
+
+    public long getLastActionRequest() {
+        return lastActionRequest;
+    }
+
     @Override
     public double getRoomFloodTime() {
         return roomFloodTime;
@@ -489,7 +540,7 @@ public class Player implements BasePlayer {
 
     @Override
     public List<Integer> getGroups() {
-        return groups == null ? Lists.newArrayList() : groups;
+        return groups;
     }
 
     @Override
@@ -708,25 +759,17 @@ public class Player implements BasePlayer {
         this.lastTradeFlood = lastTradeFlood;
     }
 
-    public void setSsoTicket(final String ssoTicket) {
-        this.ssoTicket = ssoTicket;
-    }
-
-    public String getSsoTicket() {
-        return this.ssoTicket;
-    }
-
-    public long getLastPhotoTaken() {
-        return lastPhotoTaken;
-    }
-
-    public void setLastPhotoTaken(long lastPhotoTaken) {
-        this.lastPhotoTaken = lastPhotoTaken;
-    }
-
     public int getLastVoucherRedeemAttempt() {
         return lastVoucherRedeemAttempt;
     }
+
+    public int getPinTries() { return pinTries; }
+
+    public void incrementPinTries() { this.pinTries++; }
+
+    public boolean pinSuccess() { return pinSuccess; }
+
+    public void setPinSuccess() { this.pinSuccess = true; }
 
     public void setLastVoucherRedeemAttempt(int lastVoucherRedeem) {
         this.lastVoucherRedeemAttempt = lastVoucherRedeem;
@@ -740,53 +783,50 @@ public class Player implements BasePlayer {
         this.voucherRedeemAttempts = voucherRedeemAttempts;
     }
 
-    public boolean isUsernameConfirmed() {
-        return usernameConfirmed;
+    public void setLastPhotoId(int photoId) {
+        this.lastPhotoId = photoId;
     }
 
-    public void setUsernameConfirmed(boolean usernameConfirmed) {
-        this.usernameConfirmed = usernameConfirmed;
+    public void setLastPhotoTime(long photoTime) {
+        this.lastPhotoTime = photoTime;
     }
 
-    public Set<String> getEventLogCategories() {
-        return eventLogCategories;
+    public void setLastPhotoHash(String photoHash) {
+        this.lastPhotoHash = photoHash;
     }
 
-    public ChatMessageColour getChatMessageColour() {
-        return chatMessageColour;
+    public void setLastPhotoPreview(boolean photoPreview) {
+        this.lastPhotoPreview = photoPreview;
     }
 
-    public void setChatMessageColour(ChatMessageColour chatMessageColour) {
-        this.chatMessageColour = chatMessageColour;
+    public int getLastPhotoId() {
+        return this.lastPhotoId;
     }
 
-    public HelperSession getHelperSession() {
-        return helperSession;
+    public long getLastPhotoTime() {
+        return this.lastPhotoTime;
     }
 
-    public void setHelperSession(HelperSession helperSession) {
-        this.helperSession = helperSession;
+    public boolean getLastPhotoPreview() {
+        return this.lastPhotoPreview;
     }
 
-    public HelpRequest getHelpRequest() {
-        return helpRequest;
+    public String getLastPhotoHash() {
+        return this.lastPhotoHash;
     }
 
-    public void setHelpRequest(HelpRequest helpRequest) {
-        this.helpRequest = helpRequest;
+    public void setPerformance(String performance) {
+        this.performance = performance;
     }
 
-    public Set<CatalogItem> getRecentPurchases() {
-        if(this.recentPurchases == null) {
-            this.recentPurchases = new ConcurrentHashSet<>();
+    public String getPerformance() { return  this.performance; }
 
-            this.recentPurchases.addAll(CatalogDao.findRecentPurchases(30, this.id));
-        }
-
-        return this.recentPurchases;
+    public CraftingMachine getLastCraftingMachine() {
+        return lastCraftingMachine;
     }
 
-    public NavigatorComponent getNavigator() {
-        return navigator;
+    public void setLastCraftingMachine(CraftingMachine machine) {
+        this.lastCraftingMachine = machine;
     }
+
 }

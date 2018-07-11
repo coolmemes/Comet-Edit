@@ -34,15 +34,15 @@ public class UserObjectMessageComposer extends MessageComposer {
         msg.writeString(player.getData().getUsername().toLowerCase());
         msg.writeBoolean(true);
 
-        msg.writeInt(8); // ??? (8)
+        msg.writeInt(8);
 
-        msg.writeInt(player.getStats().getDailyRespects()); // daily respects!
-        msg.writeInt(player.getStats().getScratches()); // (3) pet respects I guess
+        msg.writeInt(player.getStats().getDailyRespects());
+        msg.writeInt(player.getStats().getScratches());
 
         msg.writeBoolean(true);
         msg.writeString(getDate(player.getData().getLastVisit()));
 
-        msg.writeBoolean(player.getData().getChangingName()); // can change username
+        msg.writeBoolean(player.getData().getChangingName());
         msg.writeBoolean(false);
     }
 

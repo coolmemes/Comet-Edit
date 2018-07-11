@@ -5,12 +5,10 @@ import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.DiceFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.outgoing.room.items.SlideObjectBundleMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.items.UpdateFloorItemMessageComposer;
-import com.cometproject.server.utilities.RandomInteger;
 
 import java.util.Random;
 
@@ -32,8 +30,8 @@ public class WiredActionMoveRotate extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionMoveRotate(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionMoveRotate(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -47,7 +45,20 @@ public class WiredActionMoveRotate extends WiredActionItem {
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
+    public boolean evaluate(RoomEntity entity, Object data) {
+        if (this.hasTicks()) return false;
+
+        if (this.getWiredData().getDelay() >= 1) {
+            this.setTicks(RoomItemFactory.getProcessTime(this.getWiredData().getDelay() / 2));
+        } else {
+            this.onTickComplete();
+        }
+
+        return true;
+    }
+
+    @Override
+    public void onTickComplete() {
         if (this.getWiredData().getParams().size() != 2) {
             return;
         }
@@ -63,6 +74,7 @@ public class WiredActionMoveRotate extends WiredActionItem {
 
                 final Position currentPosition = floorItem.getPosition().copy();
                 final Position newPosition = this.handleMovement(currentPosition.copy(), movement);
+                newPosition.setZ(floorItem.getRoom().getMapping().getTile(newPosition).getOriginalHeight());
                 final int newRotation = this.handleRotation(floorItem.getRotation(), rotation);
                 final boolean rotationChanged = newRotation != floorItem.getRotation();
 
@@ -71,18 +83,17 @@ public class WiredActionMoveRotate extends WiredActionItem {
                         this.getRoom().getEntities().broadcastMessage(new SlideObjectBundleMessageComposer(currentPosition, newPosition, 0, 0, floorItem.getVirtualId()));
                     else
                         this.getRoom().getEntities().broadcastMessage(new UpdateFloorItemMessageComposer(floorItem));
-                }
 
+                }
                 floorItem.save();
             }
+            return;
         }
     }
 
     private final Random random = new Random();
 
     private Position handleMovement(Position point, int movementType) {
-        final boolean dir = Math.random() < 0.5;
-
         switch (movementType) {
             case 0:
                 return point;
@@ -103,7 +114,10 @@ public class WiredActionMoveRotate extends WiredActionItem {
                 break;
 
             case 2:
-                if (dir) {
+                // Left right
+                int i = random.nextInt((2 - 1) + 1 + 1);
+
+                if (i == 1) {
                     point = handleMovement(point, 7);
                 } else {
                     point = handleMovement(point, 5);
@@ -111,7 +125,10 @@ public class WiredActionMoveRotate extends WiredActionItem {
                 break;
 
             case 3:
-                if (dir) {
+                // Up down
+                int j = random.nextInt((2 - 1) + 1 + 1);
+
+                if (j == 1) {
                     point = handleMovement(point, 4);
                 } else {
                     point = handleMovement(point, 6);

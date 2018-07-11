@@ -4,7 +4,6 @@ import com.cometproject.server.game.pets.PetManager;
 import com.cometproject.server.game.pets.races.PetRace;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.storage.queries.pets.PetDao;
-import com.google.gson.JsonObject;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -21,7 +20,6 @@ public class PetData {
     private int energy;
 
     private int ownerId;
-    private String ownerName;
     private String colour;
     private int raceId;
     private int typeId;
@@ -44,7 +42,6 @@ public class PetData {
         this.experience = data.getInt("experience");
         this.energy = data.getInt("energy");
         this.ownerId = data.getInt("owner_id");
-        this.ownerName = data.getString("owner_name");
         this.colour = data.getString("colour");
         this.raceId = data.getInt("race_id");
         this.typeId = data.getInt("type");
@@ -57,7 +54,7 @@ public class PetData {
         this.roomPosition = new Position(data.getInt("x"), data.getInt("y"));
     }
 
-    public PetData(int id, String name, int scratches, int level, int happiness, int experience, int energy, int ownerId, String ownerName, String colour, int raceId, int typeId) {
+    public PetData(int id, String name, int scratches, int level, int happiness, int experience, int energy, int ownerId, String colour, int raceId, int typeId) {
         this.id = id;
         this.name = name;
         this.scratches = scratches;
@@ -66,44 +63,9 @@ public class PetData {
         this.experience = experience;
         this.energy = energy;
         this.ownerId = ownerId;
-        this.ownerName = ownerName;
         this.colour = colour;
         this.raceId = raceId;
         this.typeId = typeId;
-    }
-
-    public JsonObject toJsonObject() {
-        final JsonObject jsonObject = new JsonObject();
-
-        jsonObject.addProperty("id", this.id);
-        jsonObject.addProperty("name", this.name);
-        jsonObject.addProperty("scratches", this.scratches);
-        jsonObject.addProperty("level", this.level);
-        jsonObject.addProperty("happiness", this.happiness);
-        jsonObject.addProperty("experience", this.experience);
-        jsonObject.addProperty("energy", this.energy);
-        jsonObject.addProperty("ownerId", this.ownerId);
-        jsonObject.addProperty("ownerName", this.ownerName);
-        jsonObject.addProperty("colour", this.colour);
-        jsonObject.addProperty("raceId", this.raceId);
-        jsonObject.addProperty("typeId", this.typeId);
-        jsonObject.addProperty("hairDye", this.hairDye);
-        jsonObject.addProperty("hair", this.hair);
-        jsonObject.addProperty("anyRider", this.anyRider);
-        jsonObject.addProperty("saddled", this.saddled);
-        jsonObject.addProperty("birthday", this.birthday);
-
-        final JsonObject roomPosition = new JsonObject();
-
-        if(this.roomPosition != null) {
-            roomPosition.addProperty("x", this.roomPosition.getX());
-            roomPosition.addProperty("y", this.roomPosition.getY());
-            roomPosition.addProperty("z", this.roomPosition.getZ());
-        }
-
-        jsonObject.add("roomPosition", roomPosition);
-
-        return jsonObject;
     }
 
     public void saveStats() {
@@ -160,7 +122,7 @@ public class PetData {
 
     public String getColour() {
         return colour;
-}
+    }
 
     public int getRaceId() {
         return raceId;
@@ -232,13 +194,5 @@ public class PetData {
 
     public void setBirthday(int birthday) {
         this.birthday = birthday;
-    }
-
-    public String getOwnerName() {
-        return ownerName;
-    }
-
-    public void setOwnerName(final String ownerName) {
-        this.ownerName = ownerName;
     }
 }

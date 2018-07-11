@@ -46,11 +46,11 @@ public class ChatEmotionsManager {
             put(":L", ChatEmotion.LAUGH);
 
             //hehe ;-)
-            put("leon", ChatEmotion.SMILE);
-            put("alex", ChatEmotion.SMILE);//quackfag
-            put("comet", ChatEmotion.SMILE);
-            put("java", ChatEmotion.SMILE);
-            put("meesha", ChatEmotion.SMILE);
+            put("komok", ChatEmotion.SAD);
+            put("graphic", ChatEmotion.SAD);//quackfag
+            put("glower", ChatEmotion.SAD);
+            put("benjamin", ChatEmotion.ANGRY);
+            put("rename", ChatEmotion.SHOCKED);
             put("luna", ChatEmotion.SMILE);
             put("luck", ChatEmotion.SMILE);
 
@@ -60,7 +60,6 @@ public class ChatEmotionsManager {
             put("matou19", ChatEmotion.ANGRY);
             put("mathis", ChatEmotion.ANGRY);
             put("helpi", ChatEmotion.ANGRY);
-            put("gladius", ChatEmotion.ANGRY); // this was so much needed!
 
             put("minette", ChatEmotion.SHOCKED); // mathis' cat
         }};

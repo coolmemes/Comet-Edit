@@ -13,6 +13,7 @@ import java.util.Map;
 public class WearBadgeMessageEvent implements Event {
     @Override
     public void handle(Session client, MessageEvent msg) throws Exception {
+
         client.getPlayer().getInventory().resetBadgeSlots();
 
 

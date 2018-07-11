@@ -47,7 +47,7 @@ public class GroupDao {
         ResultSet resultSet = null;
 
         try {
-                sqlConnection = SqlHelper.getConnection();
+            sqlConnection = SqlHelper.getConnection();
 
             preparedStatement = SqlHelper.prepare("INSERT into groups (`name`, `description`, `badge`, `owner_id`, `room_id`, `created`, `type`, `colour1`, `colour2`, `members_deco`, `has_forum`) " +
                     "VALUES(? ,?, ?, ?, ?, ?, ?, ?, ?, ?, '0');", sqlConnection, true);
@@ -228,7 +228,7 @@ public class GroupDao {
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("SELECT `group_id` FROM group_memberships WHERE player_id = ? ORDER BY id DESC", sqlConnection, true);
+            preparedStatement = SqlHelper.prepare("SELECT `group_id` FROM group_memberships WHERE player_id = ?", sqlConnection, true);
             preparedStatement.setInt(1, playerId);
 
             resultSet = preparedStatement.executeQuery();

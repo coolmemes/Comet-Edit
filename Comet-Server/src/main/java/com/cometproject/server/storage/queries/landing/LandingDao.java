@@ -1,10 +1,16 @@
 package com.cometproject.server.storage.queries.landing;
 
 import com.cometproject.server.game.landing.types.PromoArticle;
+import com.cometproject.server.game.moderation.BanManager;
+import com.cometproject.server.game.moderation.types.BanType;
 import com.cometproject.server.game.players.data.PlayerAvatar;
 import com.cometproject.server.game.players.data.PlayerAvatarData;
+import com.cometproject.server.game.players.data.PlayerData;
 import com.cometproject.server.game.players.types.Player;
+import com.cometproject.server.game.players.types.PlayerStatistics;
+import com.cometproject.server.network.NetworkManager;
 import com.cometproject.server.storage.SqlHelper;
+import com.cometproject.server.storage.queries.player.PlayerDao;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -26,7 +32,7 @@ public class LandingDao {
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("SELECT * FROM server_articles WHERE visible = '1'", sqlConnection);
+            preparedStatement = SqlHelper.prepare("SELECT * FROM landing_articles WHERE visible = '1'", sqlConnection);
             resultSet = preparedStatement.executeQuery();
 
             while (resultSet.next()) {
@@ -54,11 +60,17 @@ public class LandingDao {
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("SELECT id, username, figure, vip_points FROM players ORDER BY " + currency + " DESC LIMIT " + limit, sqlConnection);
+            preparedStatement = SqlHelper.prepare("SELECT id, username, figure, " + currency + " FROM players WHERE " + currency + " > 0 ORDER BY " + currency + " DESC LIMIT " + limit, sqlConnection);
             resultSet = preparedStatement.executeQuery();
 
             while (resultSet.next()) {
-                data.put(new PlayerAvatarData(resultSet.getInt("id"), resultSet.getString("username"), resultSet.getString("figure")), resultSet.getInt(currency));
+                int playerId = resultSet.getInt("id");
+                PlayerData playerData = PlayerDao.getDataById(playerId);
+
+                if(BanManager.getInstance().hasBan("" + playerId, BanType.USER) || playerData.getRank() > 2)
+                    continue;
+
+                data.put(new PlayerAvatarData(playerId, resultSet.getString("username"), resultSet.getString("figure")), resultSet.getInt(currency));
             }
 
         } catch (SQLException e) {

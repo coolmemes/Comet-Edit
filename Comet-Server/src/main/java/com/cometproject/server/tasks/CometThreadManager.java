@@ -1,21 +1,17 @@
 package com.cometproject.server.tasks;
 
 import com.cometproject.server.boot.Comet;
-import com.cometproject.server.config.Configuration;
-import com.cometproject.server.game.rooms.types.components.ProcessComponent;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.*;
 
 
-public class CometThreadManager implements Initialisable {
+public class CometThreadManager implements Initializable {
     private static CometThreadManager cometThreadManagerInstance;
 
     public static int POOL_SIZE = 0;
-
-    private ScheduledExecutorService coreExecutor;
-    private ScheduledExecutorService roomProcessingExecutor;
+    private ScheduledExecutorService scheduledExecutorService;
 
     public CometThreadManager() {
 
@@ -30,55 +26,34 @@ public class CometThreadManager implements Initialisable {
 
     @Override
     public void initialize() {
-        int poolSize = Integer.parseInt((String) Configuration.currentConfig().getOrDefault("comet.system.threads", "8"));
+        int poolSize = Integer.parseInt((String) Comet.getServer().getConfig().getOrDefault("comet.system.threads", "8"));
 
-        this.coreExecutor = Executors.newScheduledThreadPool(poolSize, r -> {
+        this.scheduledExecutorService = Executors.newScheduledThreadPool(poolSize, r -> {
             POOL_SIZE++;
 
             Thread scheduledThread = new Thread(r);
             scheduledThread.setName("Comet-Scheduler-Thread-" + POOL_SIZE);
 
             final Logger log = Logger.getLogger("Comet-Scheduler-Thread-" + POOL_SIZE);
-            scheduledThread.setUncaughtExceptionHandler((t, e) -> log.error("Exception in worker thread", e));
-
-            return scheduledThread;
-        });
-
-        final int roomProcessingPool = 8;
-
-        this.roomProcessingExecutor = Executors.newScheduledThreadPool(roomProcessingPool, r -> {
-            Thread scheduledThread = new Thread(r);
-            scheduledThread.setName("Comet-Room-Scheduler-Thread-" + POOL_SIZE);
-
-            final Logger log = Logger.getLogger("Comet-Room-Scheduler-Thread-" + POOL_SIZE);
-            scheduledThread.setUncaughtExceptionHandler((t, e) -> log.error("Exception in room worker thread", e));
+            scheduledThread.setUncaughtExceptionHandler((t, e) -> log.error("Exception in Comet Worker Thread", e));
 
             return scheduledThread;
         });
     }
 
     public Future executeOnce(CometTask task) {
-        return this.coreExecutor.submit(task);
+        return this.scheduledExecutorService.submit(task);
     }
 
     public ScheduledFuture executePeriodic(CometTask task, long initialDelay, long period, TimeUnit unit) {
-        if(task instanceof ProcessComponent) {
-            // Handle room processing in a different pool, this should help against
-            return this.roomProcessingExecutor.scheduleAtFixedRate(task, initialDelay, period, unit);
-        }
-
-        return this.coreExecutor.scheduleAtFixedRate(task, initialDelay, period, unit);
+        return this.scheduledExecutorService.scheduleAtFixedRate(task, initialDelay, period, unit);
     }
 
     public ScheduledFuture executeSchedule(CometTask task, long delay, TimeUnit unit) {
-        if(task instanceof ProcessComponent) {
-            return this.roomProcessingExecutor.schedule(task, delay, unit);
-        }
-
-        return this.coreExecutor.schedule(task, delay, unit);
+        return this.scheduledExecutorService.schedule(task, delay, unit);
     }
 
-    public ScheduledExecutorService getCoreExecutor() {
-        return coreExecutor;
+    public ScheduledExecutorService getScheduledExecutorService() {
+        return scheduledExecutorService;
     }
 }

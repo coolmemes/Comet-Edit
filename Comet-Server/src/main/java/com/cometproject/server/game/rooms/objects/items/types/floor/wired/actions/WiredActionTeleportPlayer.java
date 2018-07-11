@@ -6,10 +6,9 @@ import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.WiredUtil;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
-import com.cometproject.server.game.rooms.objects.items.types.state.FloorItemEvent;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
+import com.cometproject.server.game.rooms.types.mapping.RoomTile;
 
 
 public class WiredActionTeleportPlayer extends WiredActionItem {
@@ -26,41 +25,60 @@ public class WiredActionTeleportPlayer extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionTeleportPlayer(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionTeleportPlayer(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
-        if (event.entity == null) return;
+    public boolean evaluate(RoomEntity entity, Object data) {
+        if (entity == null) return false;
+
+        if (this.entity != null && !data.equals("stacks")) {
+            // this action is busy, pls come back later.
+            return false;
+        }
+
+        this.entity = entity;
+
+        if (this.getWiredData().getDelay() >= 1) {
+            this.setTicks(RoomItemFactory.getProcessTime(this.getWiredData().getDelay() / 2));
+        } else {
+            this.onTickComplete();
+        }
+
+        return true;
+    }
+
+    @Override
+    public void onTickComplete() {
+        if (this.entity == null) return;
 
         if (this.getWiredData() == null || this.getWiredData().getSelectedIds() == null || this.getWiredData().getSelectedIds().isEmpty()) {
-            event.entity = null;
+            this.entity = null;
             return;
         }
 
         Long itemId = WiredUtil.getRandomElement(this.getWiredData().getSelectedIds());
 
         if (itemId == null) {
-            event.entity = null;
+            this.entity = null;
             return;
         }
 
         RoomItemFloor item = this.getRoom().getItems().getFloorItem(itemId);
 
         if (item == null || item.isAtDoor() || item.getPosition() == null || item.getTile() == null) {
-            event.entity = null;
+            this.entity = null;
             return;
         }
 
         Position position = new Position(item.getPosition().getX(), item.getPosition().getY(), item.getTile().getWalkHeight());
 
-        event.entity.applyEffect(new PlayerEffect(4, 5));
-
-        event.entity.cancelWalk();
-        event.entity.warp(position);
-
-        event.entity = null;
+        this.entity.setLastEffect(this.entity.getCurrentEffect());
+        this.entity.applyEffect(new PlayerEffect(4, 5));
+        this.entity.cancelWalk();
+        this.entity.warp(position);
+        this.entity = null;
     }
 
 

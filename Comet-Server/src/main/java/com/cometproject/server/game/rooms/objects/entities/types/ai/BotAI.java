@@ -1,7 +1,6 @@
 package com.cometproject.server.game.rooms.objects.entities.types.ai;
 
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
-import com.cometproject.server.game.rooms.types.mapping.RoomTile;
 import com.cometproject.server.game.rooms.types.misc.ChatEmotion;
 
 
@@ -17,8 +16,6 @@ public interface BotAI {
     boolean onRemovedFromRoom();
 
     void onTick();
-
-    void onReachedTile(RoomTile tile);
 
     void onTickComplete();
 

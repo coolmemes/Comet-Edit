@@ -7,17 +7,16 @@ import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.game.achievements.types.AchievementType;
 import com.cometproject.server.game.moderation.BanManager;
 import com.cometproject.server.game.moderation.types.BanType;
-import com.cometproject.server.game.players.PlayerManager;
 import com.cometproject.server.game.players.types.Player;
 import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.modules.ModuleManager;
 import com.cometproject.server.network.NetworkManager;
 import com.cometproject.server.network.messages.incoming.handshake.SSOTicketMessageEvent;
+import com.cometproject.server.network.messages.outgoing.catalog.subscription.SubscriptionGiftAlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.handshake.AuthenticationOKMessageComposer;
 import com.cometproject.server.network.messages.outgoing.handshake.HomeRoomMessageComposer;
 import com.cometproject.server.network.messages.outgoing.handshake.UniqueIDMessageComposer;
 import com.cometproject.server.network.messages.outgoing.moderation.CfhTopicsInitMessageComposer;
-import com.cometproject.server.network.messages.outgoing.moderation.ModToolMessageComposer;
 import com.cometproject.server.network.messages.outgoing.navigator.FavouriteRoomsMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.AlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.MotdNotificationMessageComposer;
@@ -25,6 +24,9 @@ import com.cometproject.server.network.messages.outgoing.user.details.Availabili
 import com.cometproject.server.network.messages.outgoing.user.details.PlayerSettingsMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.inventory.EffectsInventoryMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.permissions.FuserightsMessageComposer;
+import com.cometproject.server.network.messages.outgoing.user.rewards.WatchAndEarnEnabledMessageComposer;
+import com.cometproject.server.network.messages.outgoing.user.rewards.WatchAndEarnWindowMessageComposer;
+import com.cometproject.server.network.messages.outgoing.user.verification.EmailVerificationWindowMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.network.sessions.SessionManager;
 import com.cometproject.server.storage.queries.player.PlayerAccessDao;
@@ -47,7 +49,7 @@ public class PlayerLoginRequest implements CometTask {
 
     @Override
     public void run() {
-        if (this.client == null) {// || this.client.getChannel().pipeline().get("encryptionDecoder") == null) {
+        if (this.client == null){// || this.client.getChannel().pipeline().get("encryptionDecoder") == null) {
             return;
         }
 
@@ -77,7 +79,7 @@ public class PlayerLoginRequest implements CometTask {
             player = PlayerDao.getPlayerFallback(ticket);
 
             if (player == null) {
-                client.disconnect();
+                client.disconnect(false);
                 return;
             }
         }
@@ -85,7 +87,7 @@ public class PlayerLoginRequest implements CometTask {
         Session cloneSession = NetworkManager.getInstance().getSessions().getByPlayerId(player.getId());
 
         if (cloneSession != null) {
-            cloneSession.disconnect();
+            cloneSession.disconnect(true);
         }
 
         if (BanManager.getInstance().hasBan(Integer.toString(player.getId()), BanType.USER)) {
@@ -107,11 +109,6 @@ public class PlayerLoginRequest implements CometTask {
             }
 
             client.getPlayer().getData().setIpAddress(ipAddress);
-
-            if(PlayerManager.getInstance().getPlayerCountByIpAddress(ipAddress) > CometSettings.maxConnectionsPerIpAddress) {
-                client.disconnect();
-                return;
-            }
         }
 
         if (CometSettings.saveLogins)
@@ -128,13 +125,13 @@ public class PlayerLoginRequest implements CometTask {
                 sendQueue(new FuserightsMessageComposer(client.getPlayer().getSubscription().exists(), client.getPlayer().getData().getRank())).
                 sendQueue(new FavouriteRoomsMessageComposer()).
                 sendQueue(new AvailabilityStatusMessageComposer()).
+                sendQueue(new CfhTopicsInitMessageComposer()).
                 sendQueue(new PlayerSettingsMessageComposer(player.getSettings())).
                 sendQueue(new HomeRoomMessageComposer(player.getSettings().getHomeRoom(), player.getSettings().getHomeRoom())).
                 sendQueue(new EffectsInventoryMessageComposer());
-        client.sendQueue(new CfhTopicsInitMessageComposer());
 
         if (client.getPlayer().getPermissions().getRank().modTool()) {
-            client.sendQueue(new ModToolMessageComposer());
+            client.sendQueue(new EmailVerificationWindowMessageComposer(1,1));
         }
 
         if (CometSettings.motdEnabled) {
@@ -144,21 +141,42 @@ public class PlayerLoginRequest implements CometTask {
         client.flush();
 
         // Process the achievements
-        client.getPlayer().getAchievements().progressAchievement(AchievementType.LOGIN, 1);
+        client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_31, 1);
 
         int regDate = StringUtils.isNumeric(client.getPlayer().getData().getRegDate()) ? Integer.parseInt(client.getPlayer().getData().getRegDate()) : client.getPlayer().getData().getRegTimestamp();
 
         if (regDate != 0) {
             int daysSinceRegistration = (int) Math.floor((((int) Comet.getTime()) - regDate) / 86400);
 
-            if (!client.getPlayer().getAchievements().hasStartedAchievement(AchievementType.REGISTRATION_DURATION)) {
-                client.getPlayer().getAchievements().progressAchievement(AchievementType.REGISTRATION_DURATION, daysSinceRegistration);
+            if (!client.getPlayer().getAchievements().hasStartedAchievement(AchievementType.ACH_41)) {
+                client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_41, daysSinceRegistration);
             } else {
                 // Progress their achievement from the last progress to now.
-                int progress = client.getPlayer().getAchievements().getProgress(AchievementType.REGISTRATION_DURATION).getProgress();
-                if (daysSinceRegistration > client.getPlayer().getAchievements().getProgress(AchievementType.REGISTRATION_DURATION).getProgress()) {
+                int progress = client.getPlayer().getAchievements().getProgress(AchievementType.ACH_41).getProgress();
+                if (daysSinceRegistration > client.getPlayer().getAchievements().getProgress(AchievementType.ACH_41).getProgress()) {
                     int amountToProgress = daysSinceRegistration - progress;
-                    client.getPlayer().getAchievements().progressAchievement(AchievementType.REGISTRATION_DURATION, amountToProgress);
+                    client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_41, amountToProgress);
+                }
+            }
+        }
+
+        int clubDate = client.getPlayer().getSubscription().getStart();
+
+        if (clubDate != 0 && client.getPlayer().getSubscription().isValid()) {
+            if(client.getPlayer().getSubscription().getPresents() >= 1) {
+                client.sendQueue(new SubscriptionGiftAlertMessageComposer(1));
+            }
+
+            int daysSinceMembership = (int) Math.floor((((int) Comet.getTime()) - clubDate) / 86400);
+
+            if (!client.getPlayer().getAchievements().hasStartedAchievement(AchievementType.ACH_107)) {
+                client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_107, daysSinceMembership);
+            } else {
+                // Progress their achievement from the last progress to now.
+                int progress = client.getPlayer().getAchievements().getProgress(AchievementType.ACH_107).getProgress();
+                if (daysSinceMembership > client.getPlayer().getAchievements().getProgress(AchievementType.ACH_107).getProgress()) {
+                    int amountToProgress = daysSinceMembership - progress;
+                    client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_107, amountToProgress);
                 }
             }
         }
@@ -183,14 +201,5 @@ public class PlayerLoginRequest implements CometTask {
                 client.disconnect();
             }, 5, TimeUnit.SECONDS);
         }
-		
-        if (client.getPlayer().getData().getTimeMuted() != 0) {
-            if (client.getPlayer().getData().getTimeMuted() < (int) Comet.getTime()) {
-                PlayerDao.addTimeMute(player.getData().getId(), 0);
-            }
-        }
-
-        player.setSsoTicket(this.ticket);
-        PlayerManager.getInstance().getSsoTicketToPlayerId().put(this.ticket, player.getId());
     }
 }

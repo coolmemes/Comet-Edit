@@ -7,7 +7,7 @@ import com.cometproject.api.game.players.data.types.IWardrobeItem;
 import com.cometproject.server.game.players.components.types.settings.PlaylistItem;
 import com.cometproject.server.game.players.components.types.settings.VolumeData;
 import com.cometproject.server.game.players.components.types.settings.WardrobeItem;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.JsonFactory;
 import com.google.gson.reflect.TypeToken;
 
 import java.sql.ResultSet;
@@ -26,25 +26,19 @@ public class PlayerSettings implements IPlayerSettings {
     private boolean hideInRoom;
     private boolean allowFriendRequests;
     private boolean allowTrade;
-    private boolean allowFollow;
-    private boolean allowMimic;
 
     private int homeRoom;
     private boolean useOldChat;
     private boolean ignoreInvites;
-
-    private int navigatorX;
-    private int navigatorY;
-    private int navigatorHeight;
-    private int navigatorWidth;
-    private boolean navigatorShowSearches;
+    private boolean cameraFollow;
+    private boolean allowMentions;
 
     public PlayerSettings(ResultSet data, boolean isLogin) throws SQLException {
         if (isLogin) {
             String volumeData = data.getString("playerSettings_volume");
 
             if (volumeData != null && volumeData.startsWith("{")) {
-                volumes = JsonUtil.getInstance().fromJson(volumeData, VolumeData.class);
+                volumes = JsonFactory.getInstance().fromJson(volumeData, VolumeData.class);
             } else {
                 volumes = new VolumeData(100, 100, 100);
             }
@@ -53,8 +47,7 @@ public class PlayerSettings implements IPlayerSettings {
             this.hideInRoom = data.getString("playerSettings_hideInRoom").equals("1");
             this.allowFriendRequests = data.getString("playerSettings_allowFriendRequests").equals("1");
             this.allowTrade = data.getString("playerSettings_allowTrade").equals("1");
-            this.allowFollow = data.getString("playerSettings_allowFollow").equals("1");
-            this.allowMimic = data.getString("playerSettings_allowMimic").equals("1");
+            this.cameraFollow = data.getString("playerSettings_cameraFollow").equals("1");
 
             this.homeRoom = data.getInt("playerSettings_homeRoom");
 
@@ -63,7 +56,7 @@ public class PlayerSettings implements IPlayerSettings {
             if (wardrobeText == null || wardrobeText.isEmpty()) {
                 wardrobe = new ArrayList<>();
             } else {
-                wardrobe = JsonUtil.getInstance().fromJson(wardrobeText, new TypeToken<ArrayList<WardrobeItem>>() {
+                wardrobe = JsonFactory.getInstance().fromJson(wardrobeText, new TypeToken<ArrayList<WardrobeItem>>() {
                 }.getType());
             }
 
@@ -72,24 +65,18 @@ public class PlayerSettings implements IPlayerSettings {
             if (playlistText == null || playlistText.isEmpty()) {
                 playlist = new ArrayList<>();
             } else {
-                playlist = JsonUtil.getInstance().fromJson(playlistText, new TypeToken<ArrayList<PlaylistItem>>() {
+                playlist = JsonFactory.getInstance().fromJson(playlistText, new TypeToken<ArrayList<PlaylistItem>>() {
                 }.getType());
             }
 
             this.useOldChat = data.getString("playerSettings_useOldChat").equals("1");
             this.ignoreInvites = data.getString("playerSettings_ignoreInvites").equals("1");
-
-            this.navigatorX = data.getInt("playerSettings_navigatorX");
-            this.navigatorY = data.getInt("playerSettings_navigatorY");
-            this.navigatorHeight = data.getInt("playerSettings_navigatorHeight");
-            this.navigatorWidth = data.getInt("playerSettings_navigatorWidth");
-
-            this.navigatorShowSearches = data.getString("playerSettings_navigatorShowSearches").equals("1");
+            this.allowMentions = data.getString("playerSettings_allowMentions").equals("1");
         } else {
             String volumeData = data.getString("volume");
 
             if (volumeData != null && volumeData.startsWith("{")) {
-                volumes = JsonUtil.getInstance().fromJson(volumeData, VolumeData.class);
+                volumes = JsonFactory.getInstance().fromJson(volumeData, VolumeData.class);
             } else {
                 volumes = new VolumeData(100, 100, 100);
             }
@@ -98,8 +85,7 @@ public class PlayerSettings implements IPlayerSettings {
             this.hideInRoom = data.getString("hide_inroom").equals("1");
             this.allowFriendRequests = data.getString("allow_friend_requests").equals("1");
             this.allowTrade = data.getString("allow_trade").equals("1");
-            this.allowFollow = data.getString("allow_follow").equals("1");
-            this.allowFollow = data.getString("allow_mimic").equals("1");
+            this.cameraFollow = data.getString("camera_follow").equals("1");
 
             this.homeRoom = data.getInt("home_room");
 
@@ -108,7 +94,7 @@ public class PlayerSettings implements IPlayerSettings {
             if (wardrobeText == null || wardrobeText.isEmpty()) {
                 wardrobe = new ArrayList<>();
             } else {
-                wardrobe = JsonUtil.getInstance().fromJson(wardrobeText, new TypeToken<ArrayList<WardrobeItem>>() {
+                wardrobe = JsonFactory.getInstance().fromJson(wardrobeText, new TypeToken<ArrayList<WardrobeItem>>() {
                 }.getType());
             }
 
@@ -117,19 +103,13 @@ public class PlayerSettings implements IPlayerSettings {
             if (playlistText == null || playlistText.isEmpty()) {
                 playlist = new ArrayList<>();
             } else {
-                playlist = JsonUtil.getInstance().fromJson(playlistText, new TypeToken<ArrayList<PlaylistItem>>() {
+                playlist = JsonFactory.getInstance().fromJson(playlistText, new TypeToken<ArrayList<PlaylistItem>>() {
                 }.getType());
             }
 
             this.useOldChat = data.getString("chat_oldstyle").equals("1");
             this.ignoreInvites = data.getString("ignore_invites").equals("1");
-
-            this.navigatorX = data.getInt("navigator_x");
-            this.navigatorY = data.getInt("navigator_y");
-            this.navigatorHeight = data.getInt("navigator_height");
-            this.navigatorWidth = data.getInt("navigator_width");
-
-            this.navigatorShowSearches = data.getString("navigator_show_searches").equals("1");
+            this.allowMentions = data.getString("allow_mentions").equals("1");
         }
     }
 
@@ -140,17 +120,11 @@ public class PlayerSettings implements IPlayerSettings {
         this.hideOnline = false;
         this.allowFriendRequests = true;
         this.allowTrade = true;
-        this.allowFollow = true;
-        this.allowMimic = true;
+        this.cameraFollow = true;
         this.wardrobe = new ArrayList<>();
         this.playlist = new ArrayList<>();
         this.useOldChat = false;
-
-        this.navigatorX = 68;
-        this.navigatorY = 42;
-        this.navigatorWidth = 425;
-        this.navigatorHeight = 592;
-        this.navigatorShowSearches = false;
+        this.allowMentions = true;
     }
 
     public IVolumeData getVolumes() {
@@ -175,14 +149,6 @@ public class PlayerSettings implements IPlayerSettings {
 
     public boolean getAllowTrade() {
         return this.allowTrade;
-    }
-    
-    public boolean getAllowFollow() {
-        return this.allowFollow;
-    }
-    
-    public boolean getAllowMimic() {
-        return this.allowMimic;
     }
 
     public int getHomeRoom() {
@@ -209,6 +175,14 @@ public class PlayerSettings implements IPlayerSettings {
         return this.useOldChat;
     }
 
+    public boolean allowsMentions() {
+        return this.allowMentions;
+    }
+
+    public void setAllowMentions(boolean allowMentions) {
+        this.allowMentions = allowMentions;
+    }
+
     public void setUseOldChat(boolean useOldChat) {
         this.useOldChat = useOldChat;
     }
@@ -217,47 +191,15 @@ public class PlayerSettings implements IPlayerSettings {
         return ignoreInvites;
     }
 
+    public boolean isCameraFollowed() {
+        return cameraFollow;
+    }
+
+    public void setCameraFollow(boolean cameraFollow) {
+        this.cameraFollow = cameraFollow;
+    }
+
     public void setIgnoreInvites(boolean ignoreInvites) {
         this.ignoreInvites = ignoreInvites;
-    }
-
-    public int getNavigatorX() {
-        return navigatorX;
-    }
-
-    public void setNavigatorX(int navigatorX) {
-        this.navigatorX = navigatorX;
-    }
-
-    public int getNavigatorY() {
-        return navigatorY;
-    }
-
-    public void setNavigatorY(int navigatorY) {
-        this.navigatorY = navigatorY;
-    }
-
-    public int getNavigatorHeight() {
-        return navigatorHeight;
-    }
-
-    public void setNavigatorHeight(int navigatorHeight) {
-        this.navigatorHeight = navigatorHeight;
-    }
-
-    public int getNavigatorWidth() {
-        return navigatorWidth;
-    }
-
-    public void setNavigatorWidth(int navigatorWidth) {
-        this.navigatorWidth = navigatorWidth;
-    }
-
-    public boolean getNavigatorShowSearches() {
-        return navigatorShowSearches;
-    }
-
-    public void setNavigatorShowSearches(boolean navigatorShowSearches) {
-        this.navigatorShowSearches = navigatorShowSearches;
     }
 }

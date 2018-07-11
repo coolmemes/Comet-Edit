@@ -2,6 +2,7 @@ package com.cometproject.server.network.messages.outgoing.user.profile;
 
 import com.cometproject.api.networking.messages.IComposer;
 import com.cometproject.server.boot.Comet;
+import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.groups.GroupManager;
 import com.cometproject.server.game.groups.types.GroupData;
 import com.cometproject.server.game.players.PlayerManager;
@@ -21,13 +22,18 @@ public class LoadProfileMessageComposer extends MessageComposer {
     private final List<Integer> groups;
     private final boolean isMyFriend;
     private final boolean requestSent;
+    private final boolean hideOnline;
+    private final boolean isBan;
 
-    public LoadProfileMessageComposer(PlayerData player, PlayerStatistics stats, List<Integer> groups, boolean isMyFriend, boolean hasSentRequest) {
+
+    public LoadProfileMessageComposer(PlayerData player, PlayerStatistics stats, List<Integer> groups, boolean isMyFriend, boolean hasSentRequest, boolean hideOnline, boolean isBan) {
         this.player = player;
         this.stats = stats;
         this.groups = groups;
         this.isMyFriend = isMyFriend;
         this.requestSent = hasSentRequest;
+        this.hideOnline = hideOnline;
+        this.isBan = isBan;
     }
 
     @Override
@@ -38,7 +44,7 @@ public class LoadProfileMessageComposer extends MessageComposer {
     @Override
     public void compose(IComposer msg) {
         msg.writeInt(player.getId());
-        msg.writeString(player.getUsername());
+        msg.writeString(/*"<b><font color='#" + player.getVipNameColor() + "'>[" + player.getVipPrefix() + "]</font> " + */player.getUsername());
         msg.writeString(player.getFigure());
         msg.writeString(player.getMotto());
 
@@ -50,13 +56,13 @@ public class LoadProfileMessageComposer extends MessageComposer {
             isTimestamp = true;
         } catch (Exception ignored) {
         }
-
-        msg.writeString(isTimestamp ? UserObjectMessageComposer.getDate(timestamp) : player.getRegDate());
+        String banState = isBan ? Locale.getOrDefault("profile.banned.true", "Sí") : Locale.getOrDefault("profile.banned.false", "No");
+        msg.writeString(isTimestamp ? UserObjectMessageComposer.getDate(timestamp) : player.getRegDate() + " <b>" + Locale.getOrDefault("profile.banned", "Baneado") +":</b> " + banState);
         msg.writeInt(player.getAchievementPoints());
         msg.writeInt(stats.getFriendCount());
         msg.writeBoolean(isMyFriend);
         msg.writeBoolean(requestSent);
-        msg.writeBoolean(PlayerManager.getInstance().isOnline(player.getId()));
+        msg.writeBoolean(PlayerManager.getInstance().isOnline(player.getId()) && !hideOnline);
 
         List<GroupData> groups = new ArrayList<>();
 

@@ -23,7 +23,7 @@ public class EffectCommand extends ChatCommand {
             final Integer minimumRank = PermissionsManager.getInstance().getEffects().get(effectId);
 
             if(minimumRank != null && client.getPlayer().getData().getRank() < minimumRank) {
-                effectId = 10;
+                effectId = 0;
             }
 
             PlayerEntity entity = client.getPlayer().getEntity();
@@ -47,11 +47,6 @@ public class EffectCommand extends ChatCommand {
     @Override
     public String getPermission() {
         return "enable_command";
-    }
-    
-    @Override
-    public String getParameter() {
-        return Locale.getOrDefault("command.parameter.number", "%number%");
     }
 
     @Override

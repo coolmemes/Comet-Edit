@@ -5,7 +5,7 @@ import com.cometproject.server.game.landing.types.PromoArticle;
 import com.cometproject.server.game.players.data.PlayerAvatar;
 import com.cometproject.server.storage.queries.landing.LandingDao;
 import com.cometproject.server.tasks.CometThreadManager;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 
@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 
-public class LandingManager implements Initialisable {
+public class LandingManager implements Initializable {
     private static LandingManager landingManagerInstance;
     private static final Logger log = Logger.getLogger(LandingManager.class.getName());
 
@@ -63,6 +63,7 @@ public class LandingManager implements Initialisable {
                     TimeUnit.MINUTES);
         }
     }
+
 
     public Map<Integer, PromoArticle> getArticles() {
         return articles;

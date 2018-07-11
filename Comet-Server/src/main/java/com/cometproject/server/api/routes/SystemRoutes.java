@@ -1,8 +1,6 @@
 package com.cometproject.server.api.routes;
 
 import com.cometproject.api.networking.sessions.BaseSession;
-import com.cometproject.server.boot.Comet;
-import com.cometproject.server.boot.utils.ShutdownProcess;
 import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.catalog.CatalogManager;
@@ -24,28 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SystemRoutes {
-    public static Object status(Request req, Response res) {
-        Map<String, Object> result = new HashMap<>();
-        res.type("application/json");
-
-        result.put("status", Comet.getStats());
-
-        return result;
-    }
-
-    public static Object shutdown(Request req, Response res) {
-        Map<String, Object> result = new HashMap<>();
-        res.type("application/json");
-
-        try {
-            result.put("success", true);
-
-            return result;
-        } finally {
-            ShutdownProcess.shutdown(true);
-        }
-    }
-
     public static Object reload(Request req, Response res) {
         Map<String, Object> result = new HashMap<>();
         res.type("application/json");
@@ -77,7 +53,6 @@ public class SystemRoutes {
                 PermissionsManager.getInstance().loadRankPermissions();
                 PermissionsManager.getInstance().loadPerks();
                 PermissionsManager.getInstance().loadCommands();
-                PermissionsManager.getInstance().loadOverrideCommands();
                 break;
 
             case "config":

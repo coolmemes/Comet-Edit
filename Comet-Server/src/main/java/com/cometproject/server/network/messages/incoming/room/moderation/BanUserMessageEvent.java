@@ -1,7 +1,6 @@
 package com.cometproject.server.network.messages.incoming.room.moderation;
 
 import com.cometproject.api.game.rooms.settings.RoomBanState;
-import com.cometproject.server.boot.Comet;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.incoming.Event;
@@ -26,6 +25,7 @@ public class BanUserMessageEvent implements Event {
         if (client.getPlayer().getId() != room.getData().getOwnerId() && room.getData().getBanState() != RoomBanState.RIGHTS && !client.getPlayer().getPermissions().getRank().roomFullControl())
             return;
 
+
         int userId = msg.readInt();
         int junk = msg.readInt();
         String time = msg.readString();
@@ -46,16 +46,14 @@ public class BanUserMessageEvent implements Event {
                 break;
         }
 
-        int expireTimestamp = banLength == -1 ? banLength : (int) Comet.getTime() + banLength;
-
         PlayerEntity playerEntity = room.getEntities().getEntityByPlayerId(userId);
 
         if (playerEntity != null) {
-            if (room.getData().getOwnerId() == playerEntity.getPlayerId() || !playerEntity.getPlayer().getPermissions().getRank().roomKickable()) {
+            if (playerEntity.getPlayer().getData().getRank() > client.getPlayer().getData().getRank() || room.getData().getOwnerId() == playerEntity.getPlayerId() || !playerEntity.getPlayer().getPermissions().getRank().bannable()) {
                 return;
             }
 
-            room.getRights().addBan(userId, playerEntity.getUsername(), expireTimestamp);
+            room.getRights().addBan(userId, playerEntity.getUsername(), banLength);
             playerEntity.leaveRoom(false, true, true);
         }
     }

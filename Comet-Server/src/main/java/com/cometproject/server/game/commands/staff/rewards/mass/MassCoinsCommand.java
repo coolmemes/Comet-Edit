@@ -1,6 +1,6 @@
 package com.cometproject.server.game.commands.staff.rewards.mass;
 
-import com.cometproject.server.config.Locale;
+        import com.cometproject.server.config.Locale;
 
 
 public class MassCoinsCommand extends MassCurrencyCommand {
@@ -9,11 +9,6 @@ public class MassCoinsCommand extends MassCurrencyCommand {
         return "masscoins_command";
     }
 
-    @Override
-    public String getParameter() { 
-        return "";
-    }
-    
     @Override
     public String getDescription() {
         return Locale.get("command.masscoins.description");

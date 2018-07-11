@@ -7,5 +7,8 @@ public enum AchievementCategory {
     SOCIAL,
     GAMES,
     ROOM_BUILDER,
-    PETS
+    SURVIVAL_MODE,
+    PETS,
+    TOOLS,
+    COMMERCIAL
 }

@@ -34,26 +34,11 @@ public class ModToolMessageComposer extends MessageComposer {
             msg.writeString(preset);
         }
 
-        msg.writeInt(0);
-
-        /*msg.writeInt(ModerationManager.getInstance().getActionCategories().size());
+        msg.writeInt(ModerationManager.getInstance().getActionCategories().size());
 
         for (ActionCategory actionCategory : ModerationManager.getInstance().getActionCategories()) {
             msg.writeString(actionCategory.getCategoryName());
-            msg.writeBoolean(false); // unused bool
-            msg.writeInt(actionCategory.getPresets().size());
-
-            for (ActionPreset preset : actionCategory.getPresets()) {
-                msg.writeString(preset.getName());
-                msg.writeString(preset.getMessage());
-                msg.writeInt(preset.getBanLength());
-                msg.writeInt(preset.getAvatarBanLength());
-                msg.writeInt(preset.getMuteLength());
-                msg.writeInt(preset.getTradeLockLength());
-                msg.writeString(preset.getDescription());
-                msg.writeBoolean(false); // show habbo way
-            }
-        }*/
+        }
 
         // Fuses
         msg.writeBoolean(true); // tickets

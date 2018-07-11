@@ -1,5 +1,8 @@
 package com.cometproject.server.game.rooms.objects.items.types.floor.wired.conditions.negative;
 
+import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
+import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.WiredItemSnapshot;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.conditions.positive.WiredConditionMatchSnapshot;
 import com.cometproject.server.game.rooms.types.Room;
 
@@ -18,7 +21,7 @@ public class WiredNegativeConditionMatchSnapshot extends WiredConditionMatchSnap
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredNegativeConditionMatchSnapshot(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredNegativeConditionMatchSnapshot(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 }

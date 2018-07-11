@@ -3,16 +3,13 @@ package com.cometproject.server.game.rooms.objects.items.types.floor.wired;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
-import com.cometproject.server.game.rooms.objects.items.types.AdvancedFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.data.WiredActionItemData;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.data.WiredItemData;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemFlashEvent;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerPeriodically;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.composers.MessageComposer;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.JsonFactory;
 import com.cometproject.server.utilities.attributes.Stateable;
 import com.google.common.collect.Lists;
 
@@ -22,7 +19,7 @@ import java.util.List;
 /**
  * This system was inspired by Nillus' "habbod2".
  */
-public abstract class WiredFloorItem extends AdvancedFloorItem<WiredItemEvent> implements WiredItemSnapshot.Refreshable, Stateable {
+public abstract class WiredFloorItem extends RoomItemFloor implements WiredItemSnapshot.Refreshable, Stateable {
     /**
      * The data associated with this wired item
      */
@@ -43,8 +40,8 @@ public abstract class WiredFloorItem extends AdvancedFloorItem<WiredItemEvent> i
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredFloorItem(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredFloorItem(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
 
         if (!this.getExtraData().startsWith("{")) {
             this.setExtraData("{}");
@@ -56,11 +53,11 @@ public abstract class WiredFloorItem extends AdvancedFloorItem<WiredItemEvent> i
     /**
      * Turn the wired item data into a JSON object, and then save it to the database
      */
-    @Override
     public void save() {
-        this.setExtraData(JsonUtil.getInstance().toJson(wiredItemData));
-
         super.save();
+
+        this.setExtraData(JsonFactory.getInstance().toJson(wiredItemData));
+        this.saveData();
     }
 
     /**
@@ -72,13 +69,14 @@ public abstract class WiredFloorItem extends AdvancedFloorItem<WiredItemEvent> i
             return;
         }
 
-        this.wiredItemData = JsonUtil.getInstance().fromJson(this.getExtraData(), (this instanceof WiredActionItem) ? WiredActionItemData.class : WiredItemData.class);
+        this.wiredItemData = JsonFactory.getInstance().fromJson(this.getExtraData(), (this instanceof WiredActionItem) ? WiredActionItemData.class : WiredItemData.class);
         this.onDataRefresh();
     }
 
     @Override
     public void onPickup() {
         this.setExtraData("{}");
+        this.saveData();
     }
 
     @Override
@@ -123,27 +121,23 @@ public abstract class WiredFloorItem extends AdvancedFloorItem<WiredItemEvent> i
     }
 
     public void flash() {
-        this.switchState();
+        this.state = true;
 
-        final WiredItemFlashEvent flashEvent = new WiredItemFlashEvent();
-        this.queueEvent(flashEvent);
-    }
-
-    public void switchState() {
-        this.state = !this.state;
         this.sendUpdate();
     }
 
     @Override
     public void onTick() {
-        super.onTick();
+        if (this instanceof WiredTriggerPeriodically) return;
 
-        // any wired-only ontick stuff here?
-    }
+        if (this.state && this.hasTicked) {
+            this.state = false;
+            this.hasTicked = false;
 
-    @Override
-    protected void onEventComplete(WiredItemEvent event) {
-
+            this.sendUpdate();
+        } else if(this.state) {
+            this.hasTicked = true;
+        }
     }
 
     /**

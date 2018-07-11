@@ -9,6 +9,9 @@ public class Rank implements PlayerRank {
     private final boolean floodBypass;
     private final int floodTime;
 
+    private final boolean haveTag;
+    private final String tagColor;
+
     private final boolean disconnectable;
     private final boolean modTool;
     private final boolean bannable;
@@ -26,12 +29,16 @@ public class Rank implements PlayerRank {
     private final boolean messengerStaffChat;
     private final int messengerMaxFriends;
 
+    private final boolean ambassador;
+
     private boolean aboutDetailed;
     private boolean aboutStats;
 
-    public Rank(int id, String name, boolean floodBypass, int floodTime, boolean disconnectable, boolean modTool, boolean bannable, boolean roomKickable, boolean roomFullControl, boolean roomMuteBypass, boolean roomFilterBypass, boolean roomIgnorable, boolean roomEnterFull, boolean roomEnterLocked, boolean roomStaffPick, boolean roomSeeWhispers, boolean messengerStaffChat, int messengerMaxFriends, boolean aboutDetailed, boolean aboutStats) {
+    public Rank(int id, String name, boolean haveTag, String tagColor, boolean floodBypass, int floodTime, boolean disconnectable, boolean modTool, boolean bannable, boolean roomKickable, boolean roomFullControl, boolean roomMuteBypass, boolean roomFilterBypass, boolean roomIgnorable, boolean roomEnterFull, boolean roomEnterLocked, boolean roomStaffPick, boolean roomSeeWhispers, boolean messengerStaffChat, int messengerMaxFriends, boolean ambassador, boolean aboutDetailed, boolean aboutStats) {
         this.id = id;
         this.name = name;
+        this.haveTag = haveTag;
+        this.tagColor = tagColor;
         this.floodBypass = floodBypass;
         this.floodTime = floodTime;
         this.disconnectable = disconnectable;
@@ -48,6 +55,7 @@ public class Rank implements PlayerRank {
         this.roomSeeWhispers = roomSeeWhispers;
         this.messengerStaffChat = messengerStaffChat;
         this.messengerMaxFriends = messengerMaxFriends;
+        this.ambassador = ambassador;
         this.aboutDetailed = aboutDetailed;
         this.aboutStats = aboutStats;
     }
@@ -61,6 +69,10 @@ public class Rank implements PlayerRank {
     public String getName() {
         return this.name;
     }
+
+    public boolean getHaveTag() { return this.haveTag; }
+
+    public String getTagColor() { return this.tagColor; }
 
     @Override
     public boolean floodBypass() {
@@ -140,6 +152,10 @@ public class Rank implements PlayerRank {
     @Override
     public boolean aboutDetailed() {
         return this.aboutDetailed;
+    }
+
+    public boolean isAmbassador() {
+        return this.ambassador;
     }
 
     @Override

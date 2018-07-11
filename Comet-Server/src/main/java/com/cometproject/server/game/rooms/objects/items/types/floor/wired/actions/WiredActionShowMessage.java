@@ -2,8 +2,8 @@ package com.cometproject.server.game.rooms.objects.items.types.floor.wired.actio
 
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
+import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.outgoing.room.avatar.WhisperMessageComposer;
 import com.cometproject.server.tasks.CometThreadManager;
@@ -28,8 +28,8 @@ public class WiredActionShowMessage extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionShowMessage(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionShowMessage(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -43,21 +43,31 @@ public class WiredActionShowMessage extends WiredActionItem {
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
-        if (event.entity == null || !(event.entity instanceof PlayerEntity)) {
-            return;
+    public boolean evaluate(RoomEntity entity, Object data) {
+        this.entity = entity;
+
+        if (!(entity instanceof PlayerEntity)) return false;
+
+        if (this.getWiredData().getDelay() >= 1) {
+            this.setTicks(RoomItemFactory.getProcessTime(this.getWiredData().getDelay() / 2));
+        } else {
+            this.onTickComplete();
         }
 
-        PlayerEntity playerEntity = ((PlayerEntity) event.entity);
+        return true;
+    }
 
-        if(playerEntity.getPlayer() == null || playerEntity.getPlayer().getSession() == null) {
-            return;
-        }
+    public void onTickComplete() {
 
-        if(this.getWiredData() == null || this.getWiredData().getText() == null) {
-            return;
-        }
+        PlayerEntity playerEntity = ((PlayerEntity) entity);
 
-        playerEntity.getPlayer().getSession().send(new WhisperMessageComposer(playerEntity.getId(), this.getWiredData().getText(), isWhisperBubble ? 0 : 34));
+        String wiredResponse = this.getWiredData().getText().replace("%username%", playerEntity.getPlayer().getSession().getPlayer().getData().getUsername())
+                .replace("%roomname%", playerEntity.getRoom().getData().getName())
+                .replace("%userscount%", playerEntity.getRoom().getEntities().getPlayerEntities().size() + "")
+                .replace("%owner%", playerEntity.getRoom().getData().getOwner());
+
+        playerEntity.getPlayer().getSession().send(new WhisperMessageComposer(playerEntity.getId(), wiredResponse, isWhisperBubble ? 0 : 34));
+
+        return;
     }
 }

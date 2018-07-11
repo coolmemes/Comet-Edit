@@ -1,23 +1,23 @@
 package com.cometproject.server.game.rooms.objects.items;
 
-import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.server.game.items.rares.LimitedEditionItemData;
 import com.cometproject.server.game.items.types.ItemDefinition;
 import com.cometproject.server.game.rooms.objects.items.types.DefaultFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.DefaultWallItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.*;
-import com.cometproject.server.game.rooms.objects.items.types.floor.banzai.*;
 import com.cometproject.server.game.rooms.objects.items.types.floor.boutique.MannequinFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.football.*;
+import com.cometproject.server.game.rooms.objects.items.types.floor.games.banzai.*;
+import com.cometproject.server.game.rooms.objects.items.types.floor.games.freeze.*;
 import com.cometproject.server.game.rooms.objects.items.types.floor.groups.GroupFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.groups.GroupGateFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.hollywood.HaloTileFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.pet.PetToyFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.pet.horse.HorseJumpFloorItem;
+import com.cometproject.server.game.rooms.objects.items.types.floor.skateboard.SkateboardJumpFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.snowboarding.SnowboardJumpFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.snowboarding.SnowboardSlopeFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.summer.SummerShowerFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.totem.TotemBodyFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.totem.TotemHeadFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.totem.TotemPlanetFloorItem;
@@ -25,13 +25,21 @@ import com.cometproject.server.game.rooms.objects.items.types.floor.wired.action
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.addons.*;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.conditions.negative.*;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.conditions.positive.*;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.actions.*;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.conditions.WiredCustomConditionNegativePlayerHasDance;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.conditions.WiredCustomConditionNegativePlayerIsIdle;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.conditions.WiredCustomConditionPlayerHasDance;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.conditions.WiredCustomConditionPlayerIsIdle;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.triggers.WiredTriggerUserCollision;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.triggers.WiredTriggerUserIdle;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.triggers.WiredTriggerUserLeft;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.highscore.HighscoreClassicFloorItem;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.highscore.HighscoreTeamFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.*;
 import com.cometproject.server.game.rooms.objects.items.types.wall.MoodlightWallItem;
 import com.cometproject.server.game.rooms.objects.items.types.wall.PostItWallItem;
 import com.cometproject.server.game.rooms.objects.items.types.wall.WheelWallItem;
 import com.cometproject.server.game.rooms.types.Room;
-import com.cometproject.server.storage.queue.types.ItemStorageQueue;
 import org.apache.log4j.Logger;
 
 import java.util.HashMap;
@@ -60,7 +68,7 @@ public class RoomItemFactory {
             put("bed", BedFloorItem.class);
             put("vendingmachine", VendingMachineFloorItem.class);
             put("mannequin", MannequinFloorItem.class);
-            put("beach_shower", SummerShowerFloorItem.class);
+            put("toggle_state", ToggleStateFloorItem.class);
             put("halo_tile", HaloTileFloorItem.class);
             put("adjustable_height_seat", AdjustableHeightSeatFloorItem.class);
             put("adjustable_height", AdjustableHeightFloorItem.class);
@@ -68,7 +76,7 @@ public class RoomItemFactory {
             put("soundmachine", SoundMachineFloorItem.class);
             put("privatechat", PrivateChatFloorItem.class);
 
-            put("wf_act_flee", WiredActionFlee.class);//todo: this
+            put("wf_act_flee", WiredActionFlee.class);
             put("wf_act_match_to_sshot", WiredActionMatchToSnapshot.class);//new
             put("wf_act_teleport_to", WiredActionTeleportPlayer.class);//new
             put("wf_act_show_message", WiredActionShowMessage.class);//new
@@ -86,10 +94,6 @@ public class RoomItemFactory {
             put("wf_act_bot_move", WiredActionBotMove.class);//new
             put("wf_act_comet", WiredActionComet.class);//new
             put("wf_act_move_to_dir", WiredActionMoveToDirection.class);//new
-            put("wf_act_bot_talk_to_avatar", WiredActionBotTalkToAvatar.class);//new
-            put("wf_act_bot_clothes", WiredActionBotClothes.class);//new
-            put("wf_act_bot_follow_avatar", WiredActionBotFollowAvatar.class);//new
-            put("wf_act_call_stacks", WiredActionExecuteStacks.class);//new
 
             put("wf_trg_says_something", WiredTriggerPlayerSaysKeyword.class);//new
             put("wf_trg_enter_room", WiredTriggerEnterRoom.class);//new
@@ -104,7 +108,8 @@ public class RoomItemFactory {
             put("wf_trg_at_given_time", WiredTriggerAtGivenTime.class);//new
             put("wf_trg_at_given_time_long", WiredTriggerAtGivenTimeLong.class);//new
             put("wf_trg_score_achieved", WiredTriggerScoreAchieved.class);//new
-            put("wf_trg_bot_reached_avtr", WiredTriggerBotReachedAvatar.class);//new
+            put("wf_trg_user_collision", WiredTriggerUserCollision.class);// Custom
+            put("wf_trg_user_idle", WiredTriggerUserIdle.class);// Custom
 
             put("wf_cnd_trggrer_on_frn", WiredConditionTriggererOnFurni.class);//new
             put("wf_cnd_not_trggrer_on", WiredNegativeConditionTriggererOnFurni.class);//new
@@ -113,9 +118,9 @@ public class RoomItemFactory {
             put("wf_cnd_furnis_hv_avtrs", WiredConditionFurniHasPlayers.class);//new
             put("wf_cnd_not_hv_avtrs", WiredNegativeConditionFurniHasPlayers.class);//new
             put("wf_cnd_wearing_badge", WiredConditionPlayerHasBadgeEquipped.class);//new
-            put("wf_cnd_not_wearing_badge", WiredNegativeConditionPlayerHasBadgeEquipped.class);//new
+            put("wf_cnd_not_wearing_b", WiredNegativeConditionPlayerHasBadgeEquipped.class);//new
             put("wf_cnd_wearing_effect", WiredConditionPlayerWearingEffect.class);//new
-            put("wf_cnd_not_wearing_effect", WiredNegativeConditionPlayerWearingEffect.class);//new
+            put("wf_cnd_not_wearing_fx", WiredNegativeConditionPlayerWearingEffect.class);//new
             put("wf_cnd_has_furni_on", WiredConditionHasFurniOn.class);//new
             put("wf_cnd_not_furni_on", WiredNegativeConditionHasFurniOn.class);//new
             put("wf_cnd_user_count_in", WiredConditionPlayerCountInRoom.class);//new
@@ -125,7 +130,6 @@ public class RoomItemFactory {
             put("wf_cnd_has_handitem", WiredConditionHasHandItem.class);//new
             put("wf_cnd_time_more_than", WiredConditionTimeMoreThan.class);//new
             put("wf_cnd_time_less_than", WiredConditionTimeLessThan.class);//new
-            put("wf_cnd_actor_in_team", WiredConditionPlayerInTeam.class);//new
 
             put("wf_xtra_random", WiredAddonRandomEffect.class);
             put("wf_xtra_unseen", WiredAddonUnseenEffect.class);
@@ -144,6 +148,7 @@ public class RoomItemFactory {
             put("pressureplate_seat", PressurePlateSeatFloorItem.class);
 
             put("bb_teleport", BanzaiTeleporterFloorItem.class);
+            put("bb_score", BanzaiScoreFloorItem.class);
             put("bb_red_gate", BanzaiGateFloorItem.class);
             put("bb_yellow_gate", BanzaiGateFloorItem.class);
             put("bb_blue_gate", BanzaiGateFloorItem.class);
@@ -151,6 +156,16 @@ public class RoomItemFactory {
             put("bb_patch", BanzaiTileFloorItem.class);
             put("bb_timer", BanzaiTimerFloorItem.class);
             put("bb_puck", BanzaiPuckFloorItem.class);
+
+            put("freeze_timer", FreezeTimerFloorItem.class);
+            put("freeze_gate", FreezeGateFloorItem.class);
+            put("freeze_tile", FreezeTileFloorItem.class);
+            put("freeze_block", FreezeBlockFloorItem.class);
+            put("freeze_exit", FreezeExitFloorItem.class);
+            put("freeze_counter", FreezeCounterFloorItem.class);
+
+
+            put("generic_timer", GenericTimerFloorItem.class);
 
             put("group_item", GroupFloorItem.class);
             put("group_forum", GroupFloorItem.class);
@@ -166,6 +181,11 @@ public class RoomItemFactory {
             put("snowb_rail", SnowboardJumpFloorItem.class);
             put("snowb_jump", SnowboardJumpFloorItem.class);
 
+            put("skate_jump", SkateboardJumpFloorItem.class);
+            put("puzzle_box", WiredAddonPuzzleBox.class);
+
+            put("crafting", CraftingMachineFloorItem.class);
+
             put("totem_planet", TotemPlanetFloorItem.class);
             put("totem_head", TotemHeadFloorItem.class);
             put("totem_body", TotemBodyFloorItem.class);
@@ -175,20 +195,50 @@ public class RoomItemFactory {
             put("cannon", CannonFloorItem.class);
 
             put("horse_jump", HorseJumpFloorItem.class);
+
+            // EDWARD CUSTOM SALINASS
+            put("fx_provider_normal", ProviderTileFloorItem.class);
+            put("fx_provider_noob", ProviderNoobFloorItem.class);
+            put("wf_act_bot_clothes", WiredActionBotClothes.class);//new
+            put("wf_act_call_stacks", WiredActionExecuteStacks.class);
+            put("wf_act_bot_follow_avatar", WiredActionBotFollowAvatar.class);
+            put("wf_act_bot_teleport", WiredActionBotTeleport.class);
+            put("wf_act_give_score_tm", WiredActionGiveScoreTeam.class);
+            put("wf_cnd_actor_in_team", WiredConditionPlayerInTeam.class);
+            put("wf_cnd_not_in_team", WiredNegativeConditionPlayerInTeam.class);
+            put("wf_cnd_date_rng_active", WiredConditionDateRangeActive.class);
+            put("wf_act_bot_talk_to_avatar", WiredActionBotTalkToUser.class);
+            put("wf_cstm_enable", WiredCustomGiveEffect.class);
+            put("wf_cstm_hnitem", WiredCustomGiveHanditem.class);
+            put("wf_cstm_dancee", WiredCustomGiveDance.class);
+            put("wf_cstm_freeze", WiredCustomGiveFreeze.class);
+            put("wf_cstm_fswalk", WiredCustomGiveFastwalk.class);
+            put("wf_cnd_not_player_dance", WiredCustomConditionNegativePlayerHasDance.class);
+            put("wf_cnd_player_dance", WiredCustomConditionPlayerHasDance.class);
+            put("wf_trg_at_time_long", WiredTriggerAtGivenTimeLong.class);
+            put("wf_cnd_not_has_handitem", WiredNegativeConditionHasHanditem.class);
+            put("highscore_team", HighscoreTeamFloorItem.class);
+            put("wf_act_send_event", WiredCustomSendEventItem.class);
+            put("wf_act_give_ach", WiredCustomGiveAchievement.class);
+            put("wf_cnd_stuff_is", WiredConditionStuffIs.class);//new
+            put("wf_cnd_not_stuff_is", WiredNegativeConditionStuffIs.class);//new
+            put("wf_blob", WiredAddonBlob.class);//new
+            put("wf_trg_bot_reached_avtr", WiredTriggerBotReachedAvatar.class);
+            put("wf_cnd_player_is_idle", WiredCustomConditionPlayerIsIdle.class);
+            put("wf_cnd_player_is_not_idle", WiredCustomConditionNegativePlayerIsIdle.class);
+            put("wf_act_reset_idle", WiredCustomResetIdle.class);
+            put("wf_act_force_collision", WiredCustomForceCollision.class);
+            put("wf_trg_player_left", WiredTriggerUserLeft.class);
+
+            put("room_provider_link", RoomLinkProviderFloorItem.class);
+            put("crackable", CrackableFloorItem.class);
+
+            put("subscription_gate", SubscriptionGateFloorItem.class);
         }};
     }
 
-    public static RoomItemFloor createFloor(long id, int baseId, Room room, int ownerId, String ownerName, int x, int y, double height, int rot, String data, LimitedEditionItemData limitedEditionItemData) {
+    public static RoomItemFloor createFloor(long id, int baseId, Room room, int ownerId, int x, int y, double height, int rot, String data, LimitedEditionItemData limitedEditionItemData) {
         ItemDefinition def = ItemManager.getInstance().getDefinition(baseId);
-
-        if(CometSettings.storageItemQueueEnabled) {
-            final RoomItem roomItem = ItemStorageQueue.getInstance().getQueuedItem(id);
-            
-            if(roomItem != null) {
-                return ((RoomItemFloor) roomItem);
-            }
-        }
-
         RoomItemFloor floorItem = null;
 
         if (def == null) {
@@ -196,16 +246,16 @@ public class RoomItemFactory {
         }
 
         if (def.canSit()) {
-            floorItem = new SeatFloorItem(id, baseId, room, ownerId, ownerName, x, y, height, rot, data);
+            floorItem = new SeatFloorItem(id, baseId, room, ownerId, x, y, height, rot, data);
         }
 
         if (def.getItemName().startsWith(STACK_TOOL)) {
-            floorItem = new MagicStackFloorItem(id, baseId, room, ownerId, ownerName, x, y, height, rot, data);
+            floorItem = new MagicStackFloorItem(id, baseId, room, ownerId, x, y, height, rot, data);
         }
 
         if (data.startsWith(GIFT_DATA)) {
             try {
-                floorItem = new GiftFloorItem(id, baseId, room, ownerId, ownerName, x, y, height, rot, data);
+                floorItem = new GiftFloorItem(id, baseId, room, ownerId, x, y, height, rot, data);
             } catch (Exception e) {
                 return null;
 //                floorItem = new DefaultFloorItem(id, baseId, room, ownerId, x, y, height, rot, "");
@@ -213,8 +263,8 @@ public class RoomItemFactory {
         } else {
             if (itemDefinitionMap.containsKey(def.getInteraction())) {
                 try {
-                    floorItem = itemDefinitionMap.get(def.getInteraction()).getConstructor(long.class, int.class, Room.class, int.class, String.class, int.class, int.class, double.class, int.class, String.class)
-                            .newInstance(id, baseId, room, ownerId, ownerName, x, y, height, rot, data);
+                    floorItem = itemDefinitionMap.get(def.getInteraction()).getConstructor(long.class, int.class, Room.class, int.class, int.class, int.class, double.class, int.class, String.class)
+                            .newInstance(id, baseId, room, ownerId, x, y, height, rot, data);
                 } catch (Exception e) {
                     log.warn("Failed to create instance for item: " + id + ", type: " + def.getInteraction(), e);
                 }
@@ -222,7 +272,7 @@ public class RoomItemFactory {
         }
 
         if (floorItem == null) {
-            floorItem = new DefaultFloorItem(id, baseId, room, ownerId, ownerName, x, y, height, rot, data);
+            floorItem = new DefaultFloorItem(id, baseId, room, ownerId, x, y, height, rot, data);
         }
 
         if (limitedEditionItemData != null) {
@@ -232,7 +282,7 @@ public class RoomItemFactory {
         return floorItem;
     }
 
-    public static RoomItemWall createWall(long id, int baseId, Room room, int owner, String ownerName, String position, String data, LimitedEditionItemData limitedEditionItemData) {
+    public static RoomItemWall createWall(long id, int baseId, Room room, int owner, String position, String data, LimitedEditionItemData limitedEditionItemData) {
         ItemDefinition def = ItemManager.getInstance().getDefinition(baseId);
         if (def == null) {
             return null;
@@ -242,19 +292,19 @@ public class RoomItemFactory {
 
         switch (def.getInteraction()) {
             case "habbowheel": {
-                wallItem = new WheelWallItem(id, baseId, room, owner, ownerName, position, data);
+                wallItem = new WheelWallItem(id, baseId, room, owner, position, data);
                 break;
             }
             case "dimmer": {
-                wallItem = new MoodlightWallItem(id, baseId, room, owner, ownerName, position, data);
+                wallItem = new MoodlightWallItem(id, baseId, room, owner, position, data);
                 break;
             }
             case "postit": {
-                wallItem = new PostItWallItem(id, baseId, room, owner, ownerName, position, data);
+                wallItem = new PostItWallItem(id, baseId, room, owner, position, data);
                 break;
             }
             default: {
-                wallItem = new DefaultWallItem(id, baseId, room, owner, ownerName, position, data);
+                wallItem = new DefaultWallItem(id, baseId, room, owner, position, data);
                 break;
             }
         }

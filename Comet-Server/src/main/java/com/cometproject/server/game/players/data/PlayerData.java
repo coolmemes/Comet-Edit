@@ -8,6 +8,7 @@ import com.cometproject.server.storage.queue.types.PlayerDataStorageQueue;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 
 
 public class PlayerData implements PlayerAvatar, IPlayerData {
@@ -21,12 +22,19 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
     private String figure;
     private String gender;
     private String email;
+    private String pin;
+
+    private int timeMuted;
+
+    private boolean changingName = false;
+    private boolean flaggingUser = false;
 
     private String ipAddress;
 
     private int credits;
     private int vipPoints;
     private int activityPoints;
+    private int seasonalPoints;
 
     private String regDate;
     private int lastVisit;
@@ -38,16 +46,16 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
     private String temporaryFigure;
 
     private boolean vip;
+    private String nameColorCode;
+    private String nameAltCode;
+
+
+    private double stackHeight = 0;
+
     private int questId;
 
-    private int timeMuted;
-
-    private boolean changingName = false;
-
-    private boolean flaggingUser = false;
-
-    public PlayerData(int id, String username, String motto, String figure, String gender, String email, int rank, int credits, int vipPoints, int activityPoints,
-                      String reg, int lastVisit, boolean vip, int achievementPoints, int regTimestamp, int favouriteGroup, String ipAddress, int questId, int timeMuted) {
+    public PlayerData(int id, String username, String motto, String figure, String gender, String email, int rank, int credits, int vipPoints, int activityPoints, int seasonalPoints,
+                      String reg, int lastVisit, boolean vip, int achievementPoints, int regTimestamp, int favouriteGroup, String ipAddress, int questId, String nameColorCode, String nameAltCode, String pin) {
         this.id = id;
         this.username = username;
         this.motto = motto;
@@ -56,6 +64,7 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
         this.credits = credits;
         this.vipPoints = vipPoints;
         this.activityPoints = activityPoints;
+        this.seasonalPoints = seasonalPoints;
         this.gender = gender;
         this.vip = vip;
         this.achievementPoints = achievementPoints;
@@ -66,7 +75,9 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
         this.favouriteGroup = favouriteGroup;
         this.ipAddress = ipAddress;
         this.questId = questId;
-        this.timeMuted = timeMuted;
+        this.nameColorCode = nameColorCode;
+        this.nameAltCode = nameAltCode;
+        this.pin = pin;
 
         if(this.figure != null) {
             if (!PlayerFigureValidator.isValidFigureCode(this.figure, this.gender.toLowerCase())) {
@@ -86,6 +97,7 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
                 data.getInt("playerData_credits"),
                 data.getInt("playerData_vipPoints"),
                 data.getInt("playerData_activityPoints"),
+                data.getInt("playerData_seasonalPoints"),
                 data.getString("playerData_regDate"),
                 data.getInt("playerData_lastOnline"),
                 data.getString("playerData_vip").equals("1"),
@@ -94,7 +106,10 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
                 data.getInt("playerData_favouriteGroup"),
                 data.getString("playerData_lastIp"),
                 data.getInt("playerData_questId"),
-                data.getInt("playerData_timeMuted"));
+                data.getString("playerData_nameColorCode"),
+                data.getString("playerData_nameAltCode"),
+                data.getString("playerData_pin"));
+
     }
 
     public void save() {
@@ -106,7 +121,11 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
     }
 
     public void saveNow() {
-        PlayerDao.updatePlayerData(id, username, motto, figure, credits, vipPoints, gender, favouriteGroup, activityPoints, questId, achievementPoints);
+        PlayerDao.updatePlayerData(id, username, motto, figure, credits, vipPoints, gender, favouriteGroup, activityPoints, seasonalPoints, questId, achievementPoints, nameColorCode, nameAltCode);
+    }
+
+    public void saveCustomization() {
+        PlayerDao.updatePlayerCustomization(id, nameColorCode, nameAltCode);
     }
 
     public void decreaseCredits(int amount) {
@@ -123,6 +142,14 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
 
     public void increasePoints(int points) {
         this.vipPoints += points;
+    }
+
+    public void increaseSeasonalPoints(int amount){
+        this.seasonalPoints += amount;
+    }
+
+    public void decreaseSeasonalPoints(int amount){
+        this.seasonalPoints -= amount;
     }
 
     public void increaseActivityPoints(int points) {
@@ -185,9 +212,11 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
         this.credits = credits;
     }
 
-    public int getVipPoints() {
-        return this.vipPoints;
-    }
+    public int getVipPoints() { return this.vipPoints; }
+
+    public int getSeasonalPoints() { return this.seasonalPoints; }
+
+    public void setSeasonalPoints(int seasonalPoints) { this.seasonalPoints = seasonalPoints; }
 
     public int getLastVisit() {
         return this.lastVisit;
@@ -200,6 +229,31 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
     public boolean isVip() {
         return this.vip;
     }
+
+    public String getNameColorCode() {
+        return this.nameColorCode;
+    }
+
+    public String getNameAltCode() {
+        return this.nameAltCode;
+    }
+
+    public void setNameColorCode(String nameColorCode) {
+        if (nameColorCode == "rien") {
+            this.nameColorCode = null;
+        } else {
+            this.nameColorCode = nameColorCode;
+        }
+    }
+
+    public void setNameAltCode(String nameAltCode) {
+        if (nameAltCode == "none" || nameAltCode == "rien") {
+            this.nameAltCode = null;
+        } else {
+            this.nameAltCode = nameAltCode;
+        }
+    }
+
 
     public void setVip(boolean vip) {
         this.vip = vip;
@@ -265,6 +319,14 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
         this.rank = rank;
     }
 
+    public void setPinCode(String pin) {
+        this.pin = pin;
+    }
+
+    public String getPinCode() {
+        return pin;
+    }
+
     public String getTemporaryFigure() {
         return temporaryFigure;
     }
@@ -279,6 +341,12 @@ public class PlayerData implements PlayerAvatar, IPlayerData {
 
     public void setQuestId(int questId) {
         this.questId = questId;
+    }
+
+    public double getStackHeight() { return this.stackHeight; }
+
+    public void setStackHeight(double height) {
+        this.stackHeight = height;
     }
 
     public int getTimeMuted() { return this.timeMuted; }

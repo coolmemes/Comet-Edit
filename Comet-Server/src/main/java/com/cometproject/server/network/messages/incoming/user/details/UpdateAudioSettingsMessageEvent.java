@@ -5,7 +5,7 @@ import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.storage.queries.player.PlayerDao;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.JsonFactory;
 
 
 public class UpdateAudioSettingsMessageEvent implements Event {
@@ -25,6 +25,6 @@ public class UpdateAudioSettingsMessageEvent implements Event {
             return;
         }
 
-        PlayerDao.saveVolume(JsonUtil.getInstance().toJson(new VolumeData(systemVolume, furniVolume, traxVolume)), client.getPlayer().getId());
+        PlayerDao.saveVolume(JsonFactory.getInstance().toJson(new VolumeData(systemVolume, furniVolume, traxVolume)), client.getPlayer().getId());
     }
 }

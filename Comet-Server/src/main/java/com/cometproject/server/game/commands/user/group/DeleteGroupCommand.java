@@ -72,7 +72,7 @@ public class DeleteGroupCommand extends ChatCommand {
                     }
                 } else {
                     for (RoomItem roomItem : floorItemsOwnedByPlayer) {
-                        RoomItemDao.removeItemFromRoom(roomItem.getId(), groupMemberId, roomItem.getExtraData());
+                        RoomItemDao.removeItemFromRoom(roomItem.getId(), groupMemberId);
                     }
                 }
 
@@ -98,11 +98,6 @@ public class DeleteGroupCommand extends ChatCommand {
         return "deletegroup_command";
     }
 
-    @Override
-    public String getParameter() {
-        return "";
-    }
-    
     @Override
     public String getDescription() {
         return Locale.get("command.deletegroup.description");

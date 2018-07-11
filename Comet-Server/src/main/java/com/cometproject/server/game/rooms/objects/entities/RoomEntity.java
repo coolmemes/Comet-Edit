@@ -1,5 +1,6 @@
 package com.cometproject.server.game.rooms.objects.entities;
 
+import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.game.rooms.objects.RoomFloorObject;
 import com.cometproject.server.game.rooms.objects.entities.effects.PlayerEffect;
 import com.cometproject.server.game.rooms.objects.entities.pathfinding.Square;
@@ -8,14 +9,16 @@ import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PetEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.ai.BotAI;
+import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
+import com.cometproject.server.game.rooms.objects.items.types.floor.wired.custom.triggers.WiredTriggerUserIdle;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
+import com.cometproject.server.game.rooms.types.mapping.RoomEntityMovementNode;
 import com.cometproject.server.game.rooms.types.mapping.RoomTile;
 import com.cometproject.server.game.rooms.types.tiles.RoomTileState;
 import com.cometproject.server.network.messages.outgoing.room.avatar.*;
 import com.cometproject.server.utilities.collections.ConcurrentHashSet;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,6 +33,8 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
     private int bodyRotation;
     private int headRotation;
 
+    private int previousSteps = 0;
+
     private List<Square> processingPath;
     private List<Square> walkingPath;
 
@@ -42,6 +47,7 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
 
     private int danceId;
 
+    private PlayerEffect teamEffect;
     private PlayerEffect lastEffect;
     private PlayerEffect effect;
 
@@ -71,10 +77,9 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
 
     private long privateChatItemId = 0;
 
-    private Map<RoomEntityStatus, String> statuses = new ConcurrentHashMap<>();
-    private Position pendingWalk;
-
     private boolean fastWalkEnabled = false;
+
+    private Map<RoomEntityStatus, String> statuses = new ConcurrentHashMap<>();
 
     public RoomEntity(int identifier, Position startPosition, int startBodyRotation, int startHeadRotation, Room roomInstance) {
         super(identifier, startPosition, roomInstance);
@@ -143,10 +148,6 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
         if (tile == null)
             return;
 
-        if(tile.getState() == RoomTileState.INVALID) {
-            return;
-        }
-
         // reassign the position values if they're set to redirect
         if (tile.getRedirect() != null) {
             x = tile.getRedirect().getX();
@@ -185,23 +186,6 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
             }
         }
 
-        if(this.isFastWalkEnabled()) {
-            List<Square> newPath = new ArrayList<>();
-
-            boolean add = false;
-            for(Square square : path) {
-                if(add) {
-                    newPath.add(square);
-                    add = false;
-                } else {
-                    add = true;
-                }
-            }
-
-            path.clear();
-            path = newPath;
-        }
-
         this.stepsToGoal = path.size();
 
         // UnIdle the user and set the path (if the path has nodes it will mean the user is walking)
@@ -213,16 +197,37 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
         if (x == this.getPosition().getX() && y == this.getPosition().getY())
             return;
 
+        int bodyrot = this.bodyRotation;
         int rotation = Position.calculateRotation(this.getPosition().getX(), this.getPosition().getY(), x, y, false);
 
-        this.unIdle();
+        if(!this.getRoom().hasGameRoom()) this.unIdle();
+
+        int diff = bodyrot - rotation;
 
         if (!this.hasStatus(RoomEntityStatus.SIT) && !this.hasStatus(RoomEntityStatus.LAY)) {
-            this.setBodyRotation(rotation);
-            this.setHeadRotation(rotation);
-
-            this.markNeedsUpdate();
+            if(diff <= -2 || diff >= 2) {
+                this.setBodyRotation(rotation);
+                this.setHeadRotation(rotation);
+            } else {
+                this.setHeadRotation(rotation);
+            }
+        } else {
+            if(bodyrot == 2 || bodyrot == 4) {
+                if(diff > 0) {
+                    this.setHeadRotation(bodyrot - 1);
+                } else if (diff < 0) {
+                    this.setHeadRotation(bodyrot + 1);
+                }
+            } else if(bodyrot == 0 || bodyrot == 6) {
+                if(diff > 0) {
+                    this.setHeadRotation(bodyrot - 1);
+                } else if(diff < 0) {
+                    this.setHeadRotation(bodyrot + 1);
+                }
+            }
         }
+
+        this.markNeedsUpdate();
     }
 
     @Override
@@ -262,6 +267,12 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
     @Override
     public void setHeadRotation(int rotation) {
         this.headRotation = rotation;
+    }
+
+    public void refresh() {
+        this.updateVisibility(false);
+        this.updateVisibility(true);
+        this.markNeedsUpdate();
     }
 
     @Override
@@ -366,9 +377,15 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
     public boolean isIdleAndIncrement() {
         this.idleTime++;
 
-        if (this.idleTime >= 600) {
+        if(this.getRoom().hasGameRoom() && this.idleTime >= this.getRoom().getData().getChatDistance() * 2){
             if(!this.isIdle) {
                 this.isIdle = true;
+                WiredTriggerUserIdle.executeTriggers(this);
+            }
+        }else if (this.idleTime >= 600) {
+            if(!this.isIdle) {
+                this.isIdle = true;
+                WiredTriggerUserIdle.executeTriggers(this);
                 this.getRoom().getEntities().broadcastMessage(new IdleStatusMessageComposer(this.getId(), true));
             }
             return true;
@@ -380,6 +397,10 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
     @Override
     public void resetIdleTime() {
         this.idleTime = 0;
+    }
+
+    public void resetIdle(int time) {
+        this.idleTime = time;
     }
 
     @Override
@@ -397,6 +418,7 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
     }
 
     public void unIdle() {
+
         final boolean sendUpdate = this.isIdle;
         this.isIdle = false;
         this.resetIdleTime();
@@ -502,7 +524,7 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
             this.getRoom().getEntities().broadcastMessage(new ApplyEffectMessageComposer(this.getId(), effect.getEffectId()));
         }
 
-        if (effect != null && effect.expires()) {
+        if (effect != null && effect.expires() && effect.getEffectId() != 4) {
             this.lastEffect = this.effect;
         }
 
@@ -517,7 +539,7 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
         this.overriden = overriden;
     }
 
-    public abstract boolean joinRoom(Room room, String password);
+    public abstract void joinRoom(Room room, String password);
 
     protected abstract void finalizeJoinRoom();
 
@@ -531,7 +553,7 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
         return isVisible;
     }
 
-    public void updateVisibility(boolean isVisible) {
+    public void updateVisibility(boolean isVisible) { // TODO: Survival invisibility
         if (isVisible && !this.isVisible) {
             this.getRoom().getEntities().broadcastMessage(new AvatarsMessageComposer(this));
         } else {
@@ -541,15 +563,20 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
         this.isVisible = isVisible;
     }
 
-    public void refresh() {
-        this.updateVisibility(false);
-        this.updateVisibility(true);
-        this.markNeedsUpdate();
-    }
-
     public void cancelWalk() {
         this.setWalkCancelled(true);
         this.markNeedsUpdate();
+    }
+
+    public void teleportToItem(RoomItemFloor itemFloor) {
+        this.applyEffect(new PlayerEffect(4, 5));
+
+        final Position position = itemFloor.getPosition();
+
+        position.setZ(itemFloor.getTile().getWalkHeight());
+
+        this.cancelWalk();
+        this.warp(itemFloor.getPosition());
     }
 
     public void warp(Position position, boolean cancelNextUpdate) {
@@ -663,6 +690,12 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
         return false;
     }
 
+    public void applyTeamEffect(PlayerEffect effect) {
+        this.teamEffect = effect;
+
+        this.applyEffect(effect);
+    }
+
     public boolean isRoomMuted() {
         return isRoomMuted;
     }
@@ -692,14 +725,6 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
         return followingEntities;
     }
 
-    public Position getPendingWalk() {
-        return pendingWalk;
-    }
-
-    public void setPendingWalk(Position pendingWalk) {
-        this.pendingWalk = pendingWalk;
-    }
-
     public void toggleFastWalk() {
         this.fastWalkEnabled = !this.fastWalkEnabled;
     }
@@ -710,5 +735,13 @@ public abstract class RoomEntity extends RoomFloorObject implements AvatarEntity
 
     public void setFastWalkEnabled(boolean fastWalkEnabled) {
         this.fastWalkEnabled = fastWalkEnabled;
+    }
+
+    public int getPreviousSteps() {
+        return previousSteps;
+    }
+
+    public void incrementPreviousSteps() {
+        this.previousSteps++;
     }
 }

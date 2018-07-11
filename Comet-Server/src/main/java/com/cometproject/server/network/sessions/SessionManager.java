@@ -4,15 +4,20 @@ import com.cometproject.api.networking.messages.IMessageComposer;
 import com.cometproject.api.networking.sessions.BaseSession;
 import com.cometproject.api.networking.sessions.ISessionManager;
 import com.cometproject.api.networking.sessions.SessionManagerAccessor;
-import com.cometproject.server.boot.Comet;
 import com.cometproject.server.game.players.PlayerManager;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.network.messages.outgoing.notification.AlertMessageComposer;
+import com.cometproject.server.storage.SqlHelper;
+import com.cometproject.server.utilities.CometStats;
+import com.cometproject.server.utilities.JsonFactory;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +42,10 @@ public final class SessionManager implements ISessionManager {
 
     public boolean add(ChannelHandlerContext channel) {
         Session session = new Session(channel);
+
+//        if(PlayerManager.getInstance().getPlayerCountByIpAddress(session.getIpAddress()) > CometSettings.maxConnectionsPerIpAddress) {
+//            return false;
+//        }
 
         this.channelGroup.add(channel.channel());
         channel.attr(CHANNEL_ID_ATTR).set(this.idGenerator.incrementAndGet());
@@ -143,6 +152,17 @@ public final class SessionManager implements ISessionManager {
         }
     }
 
+    public int getModerationSize() {
+        int totalMods = 0;
+        for (BaseSession session : this.sessions.values()) {
+            if (session.getPlayer() != null && session.getPlayer().getPermissions() != null && session.getPlayer().getPermissions().getRank().modTool()) {
+                totalMods++;
+            }
+        }
+
+        return totalMods;
+    }
+
     @Override
     public void parseCommand(String[] message, ChannelHandlerContext ctx) {
         String password = message[0];
@@ -157,7 +177,7 @@ public final class SessionManager implements ISessionManager {
                 }
 
                 case "stats": {
-                    ctx.channel().writeAndFlush("response||" + JsonUtil.getInstance().toJson(Comet.getStats()));
+                    ctx.channel().writeAndFlush("response||" + JsonFactory.getInstance().toJson(CometStats.get()));
                     break;
                 }
 

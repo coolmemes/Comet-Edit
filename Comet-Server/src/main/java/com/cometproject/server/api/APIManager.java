@@ -1,18 +1,16 @@
 package com.cometproject.server.api;
 
-import com.cometproject.server.api.routes.PhotoRoutes;
 import com.cometproject.server.api.routes.PlayerRoutes;
 import com.cometproject.server.api.routes.RoomRoutes;
 import com.cometproject.server.api.routes.SystemRoutes;
 import com.cometproject.server.api.transformers.JsonTransformer;
 import com.cometproject.server.boot.Comet;
-import com.cometproject.server.config.Configuration;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import org.apache.log4j.Logger;
 import spark.Spark;
 
 
-public class APIManager implements Initialisable {
+public class APIManager implements Initializable {
     /**
      * The global API Manager instance
      */
@@ -29,6 +27,7 @@ public class APIManager implements Initialisable {
      */
     private static final String[] configProperties = new String[]{
             "comet.api.enabled",
+            "comet.api.host",
             "comet.api.port",
             "comet.api.token"
     };
@@ -37,6 +36,8 @@ public class APIManager implements Initialisable {
      * Is the API enabled?
      */
     private boolean enabled;
+
+    private String host;
 
     /**
      * The port the API server will listen on
@@ -83,7 +84,7 @@ public class APIManager implements Initialisable {
      */
     private void initializeConfiguration() {
         for (String configProperty : configProperties) {
-            if (!Configuration.currentConfig().containsKey(configProperty)) {
+            if (!Comet.getServer().getConfig().containsKey(configProperty)) {
                 log.warn("API configuration property not available: " + configProperty + ", API is disabled");
                 this.enabled = false;
 
@@ -91,9 +92,10 @@ public class APIManager implements Initialisable {
             }
         }
 
-        this.enabled = Configuration.currentConfig().getProperty("comet.api.enabled").equals("true");
-        this.port = Integer.parseInt(Configuration.currentConfig().getProperty("comet.api.port"));
-        this.authToken = Configuration.currentConfig().getProperty("comet.api.token");
+        this.enabled = Comet.getServer().getConfig().getProperty("comet.api.enabled").equals("true");
+        this.host = Comet.getServer().getConfig().getProperty("comet.api.host");
+        this.port = Integer.parseInt(Comet.getServer().getConfig().getProperty("comet.api.port"));
+        this.authToken = Comet.getServer().getConfig().getProperty("comet.api.token");
     }
 
     /**
@@ -103,6 +105,7 @@ public class APIManager implements Initialisable {
         if (!this.enabled)
             return;
 
+        Spark.setIpAddress(this.host);
         Spark.setPort(this.port);
 
         this.jsonTransformer = new JsonTransformer();
@@ -138,10 +141,6 @@ public class APIManager implements Initialisable {
         Spark.get("/rooms/active/all", RoomRoutes::getAllActiveRooms, jsonTransformer);
         Spark.get("/room/:id/:action", RoomRoutes::roomAction, jsonTransformer);
 
-        Spark.get("/system/status", SystemRoutes::status, jsonTransformer);
-        Spark.get("/system/shutdown", SystemRoutes::shutdown, jsonTransformer);
         Spark.get("/system/reload/:type", SystemRoutes::reload, jsonTransformer);
-        Spark.post("/camera/purchase", PhotoRoutes::purchase, jsonTransformer);
-        Spark.get("/camera/purchase", PhotoRoutes::purchase, jsonTransformer);
     }
 }

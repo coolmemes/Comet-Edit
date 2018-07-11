@@ -9,16 +9,17 @@ import com.cometproject.server.game.items.types.ItemDefinition;
 import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.protocol.headers.Composers;
 
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
+
 
 public class CatalogIndexMessageComposer extends MessageComposer {
-    private final int playerRank;
 
-    public CatalogIndexMessageComposer(final int playerRank) {
+    private final int playerRank;
+    private final boolean vip;
+
+    public CatalogIndexMessageComposer(int playerRank, boolean vip) {
         this.playerRank = playerRank;
+        this.vip = vip;
     }
 
     @Override
@@ -27,17 +28,8 @@ public class CatalogIndexMessageComposer extends MessageComposer {
     }
 
     @Override
-    public void compose(final IComposer msg) {
-        final List<CatalogPage> pages = CatalogManager.getInstance().getPagesForRank(this.playerRank);
-        final List<CatalogPage> pagesTwo = CatalogManager.getInstance().getPagesForRank(this.playerRank);
-        final List<CatalogPage> subPages = CatalogManager.getInstance().getPagesForRank(this.playerRank);
-
-        Collections.sort(subPages, new Comparator<CatalogPage>() {
-            @Override
-            public int compare(final CatalogPage o1, final CatalogPage o2) {
-                return o1.getCaption().compareTo(o2.getCaption());
-            }
-        });
+    public void compose(IComposer msg) {
+        List<CatalogPage> pages = CatalogManager.getInstance().getPagesForRank(this.playerRank, this.vip);
 
         msg.writeBoolean(true);
         msg.writeInt(0);
@@ -45,61 +37,63 @@ public class CatalogIndexMessageComposer extends MessageComposer {
         msg.writeString("root");
         msg.writeString("");
         msg.writeInt(0);
-        msg.writeInt(this.count(-1, pages));
+        msg.writeInt(count(-1, pages));
 
-        for (final CatalogPage page : pages.stream().filter(x -> x.getParentId() == -1).collect(Collectors.toList())) {
+        for (CatalogPage page : pages) {
             if (page.getParentId() != -1) {
                 continue;
             }
 
             msg.writeBoolean(true);
             msg.writeInt(page.getIcon());
-            msg.writeInt(page.isEnabled() ? page.getId() : -1);
+            msg.writeInt(page.getId());
             msg.writeString(page.getLinkName().equals("undefined") ? page.getCaption().toLowerCase().replaceAll("[^A-Za-z0-9]", "").replace(" ", "_") : page.getLinkName());
             msg.writeString(page.getCaption());
-            msg.writeInt(0);
-            msg.writeInt(this.count(page.getId(), pages));
+            msg.writeInt(page.getOfferSize());
+	/*
+	foreach (int i in Page.ItemOffers.Keys)
+	{
+		msg.writeInt(i);
+	}*/
+            msg.writeInt(count(page.getId(), pages));
 
-            for (final CatalogPage child : pagesTwo.stream().filter(x -> x.getParentId() == page.getId()).collect(Collectors.toList())) {
+
+            for (CatalogPage child : pages)
+            {
                 if (child.getParentId() != page.getId()) {
                     continue;
                 }
 
                 msg.writeBoolean(true);
                 msg.writeInt(child.getIcon());
-                msg.writeInt(child.isEnabled() ? child.getId() : -1);
+                msg.writeInt(child.getId());
                 msg.writeString(child.getLinkName().equals("undefined") ? child.getCaption().toLowerCase().replaceAll("[^A-Za-z0-9]", "").replace(" ", "_") : child.getLinkName());
                 msg.writeString(child.getCaption());
                 msg.writeInt(child.getOfferSize());
-
                 for (CatalogItem item : child.getItems().values()) {
                     if(item.getItemId().equals("-1")) continue;
 
                     ItemDefinition itemDefinition = ItemManager.getInstance().getDefinition(item.getItems().get(0).getItemId());
 
-                    if (itemDefinition != null) {
-                        int offerId = itemDefinition.getOfferId();
-
-                        if (offerId != -1) {
-                            msg.writeInt(offerId);
-
-                        }
+                    if (itemDefinition != null && itemDefinition.getOfferId() != -1 && itemDefinition.getOfferId() != 0) {
+                        msg.writeInt(itemDefinition.getOfferId());
                     }
                 }
-                
-                msg.writeInt(this.count(child.getId(), pagesTwo));
-                
-                for (final CatalogPage childTwo : subPages.stream().filter(x -> x.getParentId() == child.getId()).collect(Collectors.toList())) {
-                    if (childTwo.getParentId() != child.getId()) continue;
-                    
-                    msg.writeBoolean(true);
-                    msg.writeInt(childTwo.getIcon());
-                    msg.writeInt(childTwo.isEnabled() ? childTwo.getId() : -1);
-                    msg.writeString(childTwo.getLinkName().equals("undefined") ? childTwo.getCaption().toLowerCase().replaceAll("[^A-Za-z0-9]", "").replace(" ", "_") : childTwo.getLinkName());
-                    msg.writeString(childTwo.getCaption());
-                    msg.writeInt(childTwo.getOfferSize());
+                msg.writeInt(count(child.getId(), pages));
 
-                    for (CatalogItem item : childTwo.getItems().values()) {
+                for (CatalogPage baby : pages)
+                {
+                    if (baby.getParentId() != child.getId()) {
+                        continue;
+                    }
+
+                    msg.writeBoolean(true);
+                    msg.writeInt(baby.getIcon());
+                    msg.writeInt(baby.getId());
+                    msg.writeString(baby.getLinkName().equals("undefined") ? baby.getCaption().toLowerCase().replaceAll("[^A-Za-z0-9]", "").replace(" ", "_") : baby.getLinkName());
+                    msg.writeString(baby.getCaption());
+                    msg.writeInt(baby.getOfferSize());
+                    for (CatalogItem item : baby.getItems().values()) {
                         if(item.getItemId().equals("-1")) continue;
 
                         ItemDefinition itemDefinition = ItemManager.getInstance().getDefinition(item.getItems().get(0).getItemId());
@@ -108,25 +102,24 @@ public class CatalogIndexMessageComposer extends MessageComposer {
                             msg.writeInt(itemDefinition.getOfferId());
                         }
                     }
-                    
                     msg.writeInt(0);
                 }
             }
         }
 
-        msg.writeBoolean(true);
+        msg.writeBoolean(false);
         msg.writeString("NORMAL");
     }
 
-    private int count(final int index, final List<CatalogPage> pages) {
+    private int count(int index, List<CatalogPage> pages) {
         int i = 0;
 
-        for (final CatalogPage page : pages) {
+        for (CatalogPage page : pages) {
             if (page.getParentId() == index) {
-                ++i;
+                i++;
             }
-
         }
+
         return i;
     }
 }

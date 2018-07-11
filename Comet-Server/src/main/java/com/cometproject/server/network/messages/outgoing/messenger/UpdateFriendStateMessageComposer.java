@@ -28,6 +28,14 @@ public class UpdateFriendStateMessageComposer extends MessageComposer {
         this.relationshipLevel = level;
     }
 
+    public UpdateFriendStateMessageComposer(final PlayerAvatar playerAvatar, final boolean online, final boolean inRoom) {
+        this.playerAvatar = playerAvatar;
+        this.group = null;
+        this.online = online;
+        this.inRoom = inRoom;
+        this.relationshipLevel = null;
+    }
+
     public UpdateFriendStateMessageComposer(final Group group) {
         this.playerAvatar = null;
         this.group = group;

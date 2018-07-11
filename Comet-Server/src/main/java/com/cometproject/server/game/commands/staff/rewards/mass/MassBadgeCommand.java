@@ -5,6 +5,7 @@ import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.commands.ChatCommand;
 import com.cometproject.server.game.players.types.Player;
 import com.cometproject.server.network.NetworkManager;
+import com.cometproject.server.network.messages.outgoing.user.newyearresolution.NewYearResolutionCompletedMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.storage.queries.player.inventory.InventoryDao;
 import com.google.common.collect.Lists;
@@ -20,10 +21,12 @@ public class MassBadgeCommand extends ChatCommand {
 
         final String badgeCode = params[0];
         List<Integer> playersToInsertBadge = Lists.newArrayList();
+        // TODO: Verify if users have badge. This can cause nullpointer.
 
         for (BaseSession session : NetworkManager.getInstance().getSessions().getSessions().values()) {
             try {
                 ((Player) session.getPlayer()).getInventory().addBadge(badgeCode, false);
+                session.send(new NewYearResolutionCompletedMessageComposer(badgeCode));
                 playersToInsertBadge.add(session.getPlayer().getId());
             } catch (Exception ignored) {
 
@@ -37,11 +40,6 @@ public class MassBadgeCommand extends ChatCommand {
     @Override
     public String getPermission() {
         return "massbadge_command";
-    }
-    
-    @Override
-    public String getParameter() {
-        return Locale.getOrDefault("command.parameter.badge", "%badge%");
     }
 
     @Override

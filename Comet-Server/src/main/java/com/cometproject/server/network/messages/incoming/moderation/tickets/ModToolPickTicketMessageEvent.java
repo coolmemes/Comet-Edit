@@ -23,7 +23,7 @@ public class ModToolPickTicketMessageEvent implements Event {
 
         if (helpTicket == null) {
             return;
-        } else if (helpTicket.getModeratorId() != 0 && helpTicket.getModeratorId() != client.getPlayer().getId()) {
+        } else if (helpTicket.getModeratorId() != 0) {
             client.send(new AlertMessageComposer("This ticket has already been picked by another moderator."));
             return;
         }

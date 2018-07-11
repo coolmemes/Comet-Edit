@@ -13,12 +13,10 @@ import com.cometproject.server.protocol.headers.Composers;
 
 public class CatalogPageMessageComposer extends MessageComposer {
 
-    private final String catalogType;
     private final CatalogPage catalogPage;
     private final Player player;
 
-    public CatalogPageMessageComposer(final String catalogType, final CatalogPage catalogPage, final Player player) {
-        this.catalogType = catalogType;
+    public CatalogPageMessageComposer(final CatalogPage catalogPage, final Player player) {
         this.catalogPage = catalogPage;
         this.player = player;
     }
@@ -31,7 +29,9 @@ public class CatalogPageMessageComposer extends MessageComposer {
     @Override
     public void compose(IComposer msg) {
         msg.writeInt(this.catalogPage.getId());
-        msg.writeString(this.catalogType); // builders club or not
+
+        msg.writeString("NORMAL"); // builders club or not
+
         msg.writeString(this.catalogPage.getTemplate());
 
         msg.writeInt(this.catalogPage.getImages().size());
@@ -46,13 +46,7 @@ public class CatalogPageMessageComposer extends MessageComposer {
             msg.writeString(text);
         }
 
-        if (this.catalogPage.getType() == CatalogPageType.RECENT_PURCHASES) {
-            msg.writeInt(player.getRecentPurchases().size());
-
-            for(CatalogItem item : player.getRecentPurchases()) {
-                item.compose(msg);
-            }
-        } else if(!this.catalogPage.getTemplate().equals("frontpage") && !this.catalogPage.getTemplate().equals("club_buy")) {
+        if (!this.catalogPage.getTemplate().equals("frontpage") && !this.catalogPage.getTemplate().equals("club_buy")) {
             msg.writeInt(this.catalogPage.getItems().size());
 
             for (CatalogItem item : this.catalogPage.getItems().values()) {
@@ -64,6 +58,7 @@ public class CatalogPageMessageComposer extends MessageComposer {
 
         msg.writeInt(0);
         msg.writeBoolean(false); // allow seasonal currency as credits
+
 
         if(this.catalogPage.getTemplate().equals("frontpage4")) {
             msg.writeInt(CatalogManager.getInstance().getFrontPageEntries().size());

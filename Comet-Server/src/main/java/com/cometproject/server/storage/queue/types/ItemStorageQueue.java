@@ -1,12 +1,13 @@
 package com.cometproject.server.storage.queue.types;
 
 import com.cometproject.server.game.rooms.objects.items.RoomItem;
+import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.storage.queries.items.TradeDao;
 import com.cometproject.server.storage.queries.rooms.RoomItemDao;
 import com.cometproject.server.storage.queue.StorageQueue;
 import com.cometproject.server.tasks.CometTask;
 import com.cometproject.server.tasks.CometThreadManager;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import org.apache.log4j.Logger;
 
 import java.util.List;
@@ -16,20 +17,20 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-public class ItemStorageQueue implements Initialisable, CometTask, StorageQueue<RoomItem> {
+public class ItemStorageQueue implements Initializable, CometTask, StorageQueue<RoomItem> {
     private static final Logger log = Logger.getLogger(ItemStorageQueue.class.getName());
     private static ItemStorageQueue instance;
 
     private ScheduledFuture future;
 
     private List<RoomItem> itemsToStoreData;
-    private Map<Long, RoomItem> itemsToStore;
+    private List<RoomItem> itemsToStore;
 
     private Map<Long, Integer> itemsToChangeOwner;
 
     public ItemStorageQueue() {
         this.itemsToStoreData = new CopyOnWriteArrayList<>();
-        this.itemsToStore = new ConcurrentHashMap<>();
+        this.itemsToStore = new CopyOnWriteArrayList<>();
 
         this.itemsToChangeOwner = new ConcurrentHashMap<>();
     }
@@ -46,7 +47,7 @@ public class ItemStorageQueue implements Initialisable, CometTask, StorageQueue<
         log.debug("Saving " + (this.itemsToStoreData.size() + this.itemsToStore.size() + this.itemsToChangeOwner.size()) + " items");
 
         RoomItemDao.processBatch(this.itemsToStoreData);
-        RoomItemDao.saveFloorItems(this.itemsToStore.values());
+        RoomItemDao.saveFloorItems(this.itemsToStore);
         TradeDao.updateTradeItems(this.itemsToChangeOwner);
 
         this.itemsToStoreData.clear();
@@ -64,17 +65,17 @@ public class ItemStorageQueue implements Initialisable, CometTask, StorageQueue<
 
     @Override
     public void queueSave(final RoomItem roomItem) {
-        if(this.itemsToStore.containsKey(roomItem.getId())) {
-            this.itemsToStore.remove(roomItem.getId());
+        if(this.itemsToStore.contains(roomItem)) {
+            this.itemsToStore.remove(roomItem);
         }
 
-        this.itemsToStore.put(roomItem.getId(), roomItem);
+        this.itemsToStore.add(roomItem);
     }
 
 
     @Override
     public boolean isQueued(RoomItem object) {
-        return this.itemsToStore.containsKey(object.getId()) || this.itemsToStoreData.contains(object);
+        return this.itemsToStore.contains(object) || this.itemsToStoreData.contains(object);
     }
 
     public void changeItemOwner(Long itemId, int newOwner) {
@@ -83,10 +84,6 @@ public class ItemStorageQueue implements Initialisable, CometTask, StorageQueue<
         }
 
         this.itemsToChangeOwner.put(itemId, newOwner);
-    }
-
-    public RoomItem getQueuedItem(Long id) {
-        return this.itemsToStore.get(id);
     }
 
     @Override
@@ -109,8 +106,8 @@ public class ItemStorageQueue implements Initialisable, CometTask, StorageQueue<
 
     @Override
     public void unqueue(RoomItem floorItem) {
-        if(this.itemsToStore.containsKey(floorItem.getId())) {
-            this.itemsToStore.remove(floorItem.getId());
+        if(this.itemsToStore.contains(floorItem)) {
+            this.itemsToStore.remove(floorItem);
         }
     }
 }

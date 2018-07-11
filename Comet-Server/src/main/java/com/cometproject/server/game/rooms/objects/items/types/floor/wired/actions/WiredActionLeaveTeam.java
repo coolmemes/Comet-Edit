@@ -1,10 +1,13 @@
 package com.cometproject.server.game.rooms.objects.items.types.floor.wired.actions;
 
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
+import com.cometproject.server.game.rooms.objects.entities.effects.PlayerEffect;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
+import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.types.Room;
+import com.cometproject.server.game.rooms.types.components.games.GameTeam;
+import com.cometproject.server.network.messages.outgoing.user.details.HideAvatarOptionsMessageComposer;
 
 
 public class WiredActionLeaveTeam extends WiredActionItem {
@@ -21,8 +24,8 @@ public class WiredActionLeaveTeam extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionLeaveTeam(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionLeaveTeam(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -36,22 +39,41 @@ public class WiredActionLeaveTeam extends WiredActionItem {
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
-        if (event.entity == null || !(event.entity instanceof PlayerEntity)) {
+    public boolean evaluate(RoomEntity entity, Object data) {
+        if (entity == null || !(entity instanceof PlayerEntity)) {
+            return false;
+        }
+
+        this.entity = entity;
+
+        if (this.getWiredData().getDelay() >= 1) {
+            this.setTicks(RoomItemFactory.getProcessTime(this.getWiredData().getDelay() / 2));
+        } else {
+            this.onTickComplete();
+        }
+
+        return true;
+    }
+
+    @Override
+    public void onTickComplete() {
+        if (this.entity == null || !(this.entity instanceof PlayerEntity)) {
             return;
         }
 
-        PlayerEntity playerEntity = ((PlayerEntity) event.entity);
+        PlayerEntity playerEntity = ((PlayerEntity) this.entity);
 
         if (playerEntity.getGameTeam() == null) {
             return; // entity already in a team!
         }
 
-        this.getRoom().getGame().removeFromTeam(playerEntity.getGameTeam(), playerEntity.getPlayerId());
-        playerEntity.setGameTeam(null);
+        this.getRoom().getGame().removeFromTeam(playerEntity);
 
         if (playerEntity.getCurrentEffect() != null && playerEntity.getCurrentEffect().getEffectId() == playerEntity.getGameTeam().getFreezeEffect()) {
             playerEntity.applyEffect(null);
+
         }
+
+        playerEntity.setGameTeam(GameTeam.NONE);
     }
 }

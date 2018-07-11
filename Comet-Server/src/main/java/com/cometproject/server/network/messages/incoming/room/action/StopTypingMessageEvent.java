@@ -15,7 +15,7 @@ public class StopTypingMessageEvent implements Event {
             return;
         }
 
-        client.getPlayer().getEntity().unIdle();
+        if(!client.getPlayer().getEntity().getRoom().hasGameRoom()) client.getPlayer().getEntity().unIdle();
         client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(new TypingStatusMessageComposer(client.getPlayer().getEntity().getId(), 0));
     }
 }

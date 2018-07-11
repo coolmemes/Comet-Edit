@@ -1,10 +1,9 @@
 package com.cometproject.server.game.bots;
 
+import com.cometproject.server.game.rooms.objects.entities.types.data.BotDataObject;
 import com.cometproject.server.storage.queries.bots.RoomBotDao;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.JsonFactory;
 import com.cometproject.server.utilities.RandomInteger;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 
 import java.util.Arrays;
 
@@ -60,9 +59,8 @@ public abstract class BotData implements BotInformation {
      */
     private String[] messages;
 
-    private BotType botType;
-
-    private BotMode mode;
+    private String botType;
+    private String mode;
 
     private String data;
 
@@ -90,54 +88,12 @@ public abstract class BotData implements BotInformation {
         this.gender = gender;
         this.ownerId = ownerId;
         this.ownerName = ownerName;
-        this.botType = BotType.valueOf(botType.toUpperCase());
-        this.mode = BotMode.valueOf(mode.toUpperCase());
+        this.botType = botType;
+        this.mode = mode;
         this.data = data;
-        this.messages = (messages == null || messages.isEmpty()) ? new String[0] : JsonUtil.getInstance().fromJson(messages, String[].class);
+        this.messages = (messages == null || messages.isEmpty()) ? new String[0] : JsonFactory.getInstance().fromJson(messages, String[].class);
         this.chatDelay = chatDelay;
         this.isAutomaticChat = automaticChat;
-    }
-
-    public BotData(int id, String username, String motto, String figure, String gender, String ownerName, int ownerId, String[] messages, boolean automaticChat, int chatDelay, String botType, String mode, String data) {
-        this.id = id;
-        this.username = username;
-        this.motto = motto;
-        this.figure = figure;
-        this.gender = gender;
-        this.ownerId = ownerId;
-        this.ownerName = ownerName;
-        this.botType = BotType.valueOf(botType.toUpperCase());
-        this.mode = BotMode.valueOf(mode.toUpperCase());
-        this.data = data;
-        this.messages = messages;
-        this.chatDelay = chatDelay;
-        this.isAutomaticChat = automaticChat;
-    }
-
-    public JsonObject toJsonObject() {
-        final JsonObject jsonObject = new JsonObject();
-        final JsonArray jsonArray = new JsonArray();
-
-        jsonObject.addProperty("id", this.id);
-        jsonObject.addProperty("username", this.username);
-        jsonObject.addProperty("motto", this.motto);
-        jsonObject.addProperty("figure", this.figure);
-        jsonObject.addProperty("gender", this.gender);
-        jsonObject.addProperty("ownerId", this.ownerId);
-        jsonObject.addProperty("ownerName", this.ownerName);
-        jsonObject.addProperty("botType", this.botType.toString());
-        jsonObject.addProperty("mode", this.mode.toString());
-        jsonObject.addProperty("data", this.data);
-        jsonObject.addProperty("chatDelay", this.chatDelay);
-        jsonObject.addProperty("isAutomaticChat", this.isAutomaticChat);
-
-        for(String message : this.messages) {
-            jsonArray.add(message);
-        }
-
-        jsonObject.add("messages", jsonArray);
-
-        return jsonObject;
     }
 
     /**
@@ -332,15 +288,19 @@ public abstract class BotData implements BotInformation {
         Arrays.fill(messages, null);
     }
 
-    public BotType getBotType() {
+    public String getBotType() {
         return botType;
     }
 
-    public BotMode getMode() {
+    public void setBotType(String botType) {
+        this.botType = botType;
+    }
+
+    public String getMode() {
         return mode;
     }
 
-    public void setMode(BotMode mode) {
+    public void setMode(String mode) {
         this.mode = mode;
     }
 

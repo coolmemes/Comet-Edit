@@ -25,8 +25,8 @@ public class WiredConditionMatchSnapshot extends WiredConditionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredConditionMatchSnapshot(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredConditionMatchSnapshot(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -36,7 +36,7 @@ public class WiredConditionMatchSnapshot extends WiredConditionItem {
 
     @Override
     public boolean evaluate(RoomEntity entity, Object data) {
-        if (this.getWiredData().getParams().size() != 3) {
+        if (this.getWiredData().getParams().size() != 3 || this.getWiredData().getSelectedIds().size() < 1) {
             return false;
         }
 
@@ -70,7 +70,7 @@ public class WiredConditionMatchSnapshot extends WiredConditionItem {
                 }
 
                 if (matchPosition) {
-                    if (floorItem.getPosition().getX() != snapshot.getX() || floorItem.getPosition().getY() != snapshot.getY()) {
+                    if (floorItem.getPosition().getX() != snapshot.getX() || floorItem.getPosition().getY() != snapshot.getY() || floorItem.getPosition().getZ() != snapshot.getZ()) {
                         matchesPosition = false;
                     } else if (this.isNegative) {
                         matchesPosition = true;

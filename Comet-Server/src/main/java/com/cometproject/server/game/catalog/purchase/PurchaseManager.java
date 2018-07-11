@@ -42,7 +42,7 @@ public class PurchaseManager {
                 session.send(new GiftUserNotFoundMessageComposer());
                 return;
             } else {
-                session.getPlayer().getAchievements().progressAchievement(AchievementType.GIFT_GIVER, 1);
+                session.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_25, 1);
             }
         }
 

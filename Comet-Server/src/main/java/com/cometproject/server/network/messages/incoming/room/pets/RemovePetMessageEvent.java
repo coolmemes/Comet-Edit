@@ -1,9 +1,7 @@
 package com.cometproject.server.network.messages.incoming.room.pets;
 
-import com.cometproject.api.game.rooms.settings.RoomKickState;
 import com.cometproject.server.game.pets.data.PetData;
 import com.cometproject.server.game.rooms.objects.entities.types.PetEntity;
-import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.NetworkManager;
 import com.cometproject.server.network.messages.incoming.Event;
@@ -24,21 +22,6 @@ public class RemovePetMessageEvent implements Event {
         PetEntity entity = client.getPlayer().getEntity().getRoom().getEntities().getEntityByPetId(petId);
 
         if (entity == null) {
-            final PlayerEntity playerEntity = client.getPlayer().getEntity().getRoom().getEntities().getEntityByPlayerId(petId);
-
-            if(playerEntity.hasAttribute("transformation")) {
-                if (!client.getPlayer().getEntity().getRoom().getRights().hasRights(client.getPlayer().getId())
-                        && !client.getPlayer().getPermissions().getRank().roomFullControl() && client.getPlayer().getEntity().getRoom().getData().getKickState() != RoomKickState.EVERYONE) {
-                    return;
-                }
-
-                if (client.getPlayer().getEntity().getRoom().getData().getOwnerId() == playerEntity.getPlayerId() || !playerEntity.getPlayer().getPermissions().getRank().roomKickable()) {
-                    return;
-                }
-
-                playerEntity.kick();
-            }
-
             return;
         }
 

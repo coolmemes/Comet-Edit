@@ -1,6 +1,5 @@
 package com.cometproject.server.storage.queries.items;
 
-import com.cometproject.server.game.catalog.purchase.CatalogPurchase;
 import com.cometproject.server.game.catalog.purchase.OldCatalogPurchaseHandler;
 import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.server.game.items.types.ItemDefinition;
@@ -31,7 +30,6 @@ public class ItemDao {
             resultSet = preparedStatement.executeQuery();
 
             while (resultSet.next()) {
-//                if(resultSet.getString("id").length() > 9) continue;
                 try {
                     data.put(resultSet.getInt("id"), new ItemDefinition(resultSet));
                 } catch (Exception e) {
@@ -88,7 +86,7 @@ public class ItemDao {
         return 0;
     }
 
-    public static List<Long> createItems(List<CatalogPurchase> catalogPurchases) {
+    public static List<Long> createItems(List<OldCatalogPurchaseHandler.CatalogPurchase> catalogPurchases) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
@@ -100,7 +98,7 @@ public class ItemDao {
 
             preparedStatement = SqlHelper.prepare("INSERT into items (`user_id`, `room_id`, `base_item`, `extra_data`, `x`, `y`, `z`, `rot`, `wall_pos`) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);", sqlConnection, true);
 
-            for (CatalogPurchase purchase : catalogPurchases) {
+            for (OldCatalogPurchaseHandler.CatalogPurchase purchase : catalogPurchases) {
                 preparedStatement.setInt(1, purchase.getPlayerId());
                 preparedStatement.setInt(2, 0);
                 preparedStatement.setInt(3, purchase.getItemBaseId());
@@ -130,6 +128,81 @@ public class ItemDao {
         }
 
         return data;
+    }
+
+    public enum DefinitionType{
+
+        WIDTH("width"),
+        LENGHT("lenght"),
+        INTERACTION("interaction_type"),
+        MULTIHEIGHT("variable_heights"),
+        MODES("interaction_modes_count"),
+        HEIGHT("stack_height"),
+        TRADE("allow_trade"),
+        STACK("can_stack"),
+        STACK_ITEMS("allow_inventory_stack"),
+        GIFT("allow_gift"),
+        SIT("can_sit"),
+        VENDING("vending_ids"),
+        WALK("is_walkable"),
+        EFFECT("effectid"),
+        NEED_RIGHTS("requires_rights"),
+        LAY("canlayon");
+
+        private String type;
+
+        DefinitionType(String type) { this.type = type; }
+
+        public String getDefinitionType() {
+            return type;
+        }
+    }
+
+    public static void updateDefinition(DefinitionType type, String value, int baseId) {
+        Connection sqlConnection = null;
+        PreparedStatement preparedStatement = null;
+
+        try {
+            sqlConnection = SqlHelper.getConnection();
+
+            preparedStatement = SqlHelper.prepare("UPDATE furniture SET " + type.getDefinitionType() + " = ? WHERE id = ? LIMIT 1", sqlConnection);
+            preparedStatement.setString(1, value);
+            preparedStatement.setInt(2, baseId);
+
+            SqlHelper.executeStatementSilently(preparedStatement, false);
+        } catch (SQLException e) {
+            SqlHelper.handleSqlException(e);
+        } finally {
+            SqlHelper.closeSilently(preparedStatement);
+            SqlHelper.closeSilently(sqlConnection);
+        }
+    }
+
+    public static int getItemByName(String itemName) {
+        Connection sqlConnection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+
+        try {
+            sqlConnection = SqlHelper.getConnection();
+
+            preparedStatement = SqlHelper.prepare("SELECT id FROM furniture WHERE item_name = ? LIMIT 1", sqlConnection);
+            preparedStatement.setString(1, itemName);
+
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getInt(1);
+            }
+        } catch (SQLException e) {
+            SqlHelper.handleSqlException(e);
+        } finally {
+            SqlHelper.closeSilently(resultSet);
+            SqlHelper.closeSilently(preparedStatement);
+            SqlHelper.closeSilently(sqlConnection);
+        }
+
+        return 0;
     }
 
 }

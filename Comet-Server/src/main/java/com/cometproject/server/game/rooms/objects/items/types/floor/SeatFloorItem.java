@@ -11,8 +11,8 @@ import com.cometproject.server.network.messages.outgoing.room.avatar.AvatarUpdat
 
 public class SeatFloorItem extends RoomItemFloor {
 
-    public SeatFloorItem(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public SeatFloorItem(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -50,6 +50,12 @@ public class SeatFloorItem extends RoomItemFloor {
         entity.setHeadRotation(this.getRotation());
         entity.addStatus(RoomEntityStatus.SIT, String.valueOf(height).replace(',', '.'));
 
+        if(this.getDefinition().getInteraction().equals("toggle_state")){
+            this.setExtraData("1");
+            this.sendUpdate();
+        }
+
+
         if (instantUpdate)
             this.getRoom().getEntities().broadcastMessage(new AvatarUpdateMessageComposer(entity));
         else
@@ -65,6 +71,11 @@ public class SeatFloorItem extends RoomItemFloor {
     public void onEntityStepOff(RoomEntity entity) {
         if (entity.hasStatus(RoomEntityStatus.SIT)) {
             entity.removeStatus(RoomEntityStatus.SIT);
+        }
+
+        if(this.getDefinition().getInteraction().equals("toggle_state")){
+            this.setExtraData("0");
+            this.sendUpdate();
         }
 
         entity.markNeedsUpdate();

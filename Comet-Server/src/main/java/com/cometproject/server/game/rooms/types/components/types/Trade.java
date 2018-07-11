@@ -9,11 +9,8 @@ import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.network.messages.outgoing.catalog.UnseenItemsMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.AlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.trading.*;
-import com.cometproject.server.network.messages.outgoing.user.inventory.InventoryMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.inventory.UpdateInventoryMessageComposer;
-import com.cometproject.server.storage.queries.items.TradeDao;
 import com.cometproject.server.storage.queue.types.ItemStorageQueue;
-import com.cometproject.server.tasks.CometThreadManager;
 import com.cometproject.server.utilities.collections.ConcurrentHashSet;
 
 import java.util.*;
@@ -68,9 +65,6 @@ public class Trade {
             user2.markNeedsUpdate();
         }
 
-        user1.getPlayer().getSession().send(new InventoryMessageComposer(user1.getPlayer().getInventory()));
-        user2.getPlayer().getSession().send(new InventoryMessageComposer(user2.getPlayer().getInventory()));
-
         sendToUsers(new TradeStartMessageComposer(user1.getPlayer().getId(), user2.getPlayer().getId()));
     }
 
@@ -93,23 +87,12 @@ public class Trade {
         this.user1Items.clear();
         this.user2Items.clear();
 
-        boolean sendToUser1 = true;
-        boolean sendToUser2 = true;
-
-        if (isLeave) {
-            if (user1.getPlayer() == null || userId == user1.getPlayer().getId()) {
-                sendToUser1 = false;
-            } else {
-                sendToUser2 = false;
-            }
-        }
-
-        if (user1 != null && user1.getPlayer() != null && sendToUser1) {
+        if (user1 != null && user1.getPlayer() != null) {
             user1.removeStatus(RoomEntityStatus.TRADE);
             user1.markNeedsUpdate();
         }
 
-        if (user2 != null && user2.getPlayer() != null && sendToUser2) {
+        if (user2 != null && user2.getPlayer() != null) {
             user2.removeStatus(RoomEntityStatus.TRADE);
             user2.markNeedsUpdate();
         }
@@ -276,27 +259,19 @@ public class Trade {
             }
         }
 
-        final Map<Long, Integer> itemsToSave = new HashMap<>();
-
         for (PlayerItem item : this.user1Items) {
             user1.getPlayer().getInventory().removeItem(item);
             user2.getPlayer().getInventory().addItem(item);
 
-            itemsToSave.put(item.getId(), user2.getPlayer().getId());
+            ItemStorageQueue.getInstance().changeItemOwner(item.getId(), user2.getPlayer().getId());
         }
 
         for (PlayerItem item : this.user2Items) {
             user2.getPlayer().getInventory().removeItem(item);
             user1.getPlayer().getInventory().addItem(item);
 
-
-            itemsToSave.put(item.getId(), user1.getPlayer().getId());
+            ItemStorageQueue.getInstance().changeItemOwner(item.getId(), user1.getPlayer().getId());
         }
-
-        CometThreadManager.getInstance().executeOnce(() -> {
-            TradeDao.updateTradeItems(itemsToSave);
-            itemsToSave.clear();
-        });
 
         user1.getPlayer().getSession().send(new UnseenItemsMessageComposer(user2Items));
         user2.getPlayer().getSession().send(new UnseenItemsMessageComposer(user1Items));

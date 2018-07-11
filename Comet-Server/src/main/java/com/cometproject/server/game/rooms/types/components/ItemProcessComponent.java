@@ -7,7 +7,6 @@ import com.cometproject.server.game.rooms.objects.items.RoomItemWall;
 import com.cometproject.server.game.rooms.objects.items.queue.RoomItemEventQueue;
 import com.cometproject.server.game.rooms.objects.items.types.floor.RollableFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.RollerFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerPeriodically;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.tasks.CometTask;
 import com.cometproject.server.tasks.CometThreadManager;
@@ -16,12 +15,10 @@ import org.apache.log4j.Logger;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.Set;
-import java.util.HashSet;
 
 
 public class ItemProcessComponent implements CometTask {
-    //    private final int INTERVAL = Integer.parseInt(Configuration.currentConfig().get("comet.system.item_process.interval"));
+    //    private final int INTERVAL = Integer.parseInt(Comet.getServer().getConfig().get("comet.system.item_process.interval"));
     private static final int INTERVAL = 500;
     private static final int FLAG = 400;
 
@@ -88,21 +85,9 @@ public class ItemProcessComponent implements CometTask {
 
         if (this.getRoom().getEntities().realPlayerCount() == 0) return;
 
-        final Set<String> positionsWithPeriodicTrigger = new HashSet<>();
-        
         for (RoomItemFloor item : this.getRoom().getItems().getFloorItems().values()) {
             try {
                 if (item != null && !(item instanceof RollableFloorItem) && item.requiresTick() || item instanceof RollerFloorItem) {
-                    if(item instanceof WiredTriggerPeriodically) {
-                        final String posStr = item.getPosition().getX() + "_" + item.getPosition().getY();
-                        
-                        if(positionsWithPeriodicTrigger.contains(posStr)) {
-                            continue;
-                        } else {
-                            positionsWithPeriodicTrigger.add(posStr);
-                        }
-                    }
-                    
                     item.tick();
                 }
             } catch (Exception e) {
@@ -122,7 +107,7 @@ public class ItemProcessComponent implements CometTask {
 
         // Now lets process any queued events last
 //        try {
-//            this.eventQueue.processBans();
+//            this.eventQueue.tick();
 //        } catch (NullPointerException | IndexOutOfBoundsException e) {
 //            this.handleSupressedExceptions(e);
 //        }

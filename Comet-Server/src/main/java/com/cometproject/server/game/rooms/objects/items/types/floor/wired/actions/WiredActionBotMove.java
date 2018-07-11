@@ -1,18 +1,18 @@
 package com.cometproject.server.game.rooms.objects.items.types.floor.wired.actions;
 
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
-import com.cometproject.server.game.rooms.objects.entities.effects.PlayerEffect;
 import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.WiredUtil;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
 
-
 public class WiredActionBotMove extends WiredActionItem {
+    private BotEntity botEntity;
+    private Position targetPosition;
+
     /**
      * The default constructor
      *
@@ -26,41 +26,14 @@ public class WiredActionBotMove extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionBotMove(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionBotMove(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
-        if (this.getWiredData() == null || this.getWiredData().getSelectedIds() == null || this.getWiredData().getSelectedIds().isEmpty()) {
-            return;
-        }
-
-        Long itemId = WiredUtil.getRandomElement(this.getWiredData().getSelectedIds());
-
-        if (itemId == null) {
-            return;
-        }
-
-        RoomItemFloor item = this.getRoom().getItems().getFloorItem(itemId);
-
-        if (item == null || item.isAtDoor() || item.getPosition() == null || item.getTile() == null) {
-            return;
-        }
-
-        Position position = new Position(item.getPosition().getX(), item.getPosition().getY());
-
-        final String entityName = this.getWiredData().getText();
-
-        final BotEntity botEntity = this.getRoom().getBots().getBotByName(entityName);
-
-        if(botEntity == null) {
-            return;
-        }
-
-        botEntity.moveTo(position);
+    public boolean requiresPlayer() {
+        return false;
     }
-
 
     @Override
     public int getInterface() {
@@ -68,7 +41,43 @@ public class WiredActionBotMove extends WiredActionItem {
     }
 
     @Override
-    public boolean requiresPlayer() {
+    public boolean evaluate(RoomEntity entity, Object data) {
+        if (this.getWiredData() == null || this.getWiredData().getSelectedIds() == null || this.getWiredData().getSelectedIds().isEmpty()) {
+            return false;
+        }
+
+        Long itemId = WiredUtil.getRandomElement(this.getWiredData().getSelectedIds());
+
+        if (itemId == null) {
+            return false;
+        }
+
+        RoomItemFloor item = this.getRoom().getItems().getFloorItem(itemId);
+
+        if (item == null || item.isAtDoor() || item.getPosition() == null || item.getTile() == null) {
+            return false;
+        }
+
+        Position position = new Position(item.getPosition().getX(), item.getPosition().getY());
+
+        final String entityName = this.getWiredData().getText();
+
+        this.botEntity = this.getRoom().getBots().getBotByName(entityName);
+        this.targetPosition = position;
+
+        if (this.getWiredData().getDelay() >= 1) {
+            this.setTicks(RoomItemFactory.getProcessTime(this.getWiredData().getDelay() / 2));
+        } else {
+            this.onTickComplete();
+        }
+
         return true;
+    }
+
+
+    public void onTickComplete() {
+        if (this.botEntity == null) return;
+
+        this.botEntity.moveTo(this.targetPosition);
     }
 }

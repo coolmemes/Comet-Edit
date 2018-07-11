@@ -25,6 +25,14 @@ public class ClubStatusMessageComposer extends MessageComposer {
         int days = 0;
         int months = 0;
 
+        boolean needsForce = false;
+
+        if(subscriptionComponent.getExpire() > 0) {
+            needsForce = false;
+        } else {
+            needsForce = true;
+        }
+
         if (subscriptionComponent.isValid()) {
             timeLeft = subscriptionComponent.getExpire() - (int) Comet.getTime();
             days = (int) Math.ceil(timeLeft / 86400);
@@ -41,15 +49,15 @@ public class ClubStatusMessageComposer extends MessageComposer {
 
         msg.writeString("habbo_club");
 
-        msg.writeInt(0);
+        msg.writeInt(days - (months * 31));
         msg.writeInt(2);
-        msg.writeInt(0);
-        msg.writeInt(1);
-        msg.writeBoolean(subscriptionComponent.isValid());
+        msg.writeInt(months);
+        msg.writeInt(1); // tipo 1 HC 2 VIP
+        msg.writeBoolean(true);
         msg.writeBoolean(true);
         msg.writeInt(0);
-        msg.writeInt(0);
-        msg.writeInt(495);
+        msg.writeInt(subscriptionComponent.getExpire()); // tiempo restante de la suscripción
+        msg.writeInt(needsForce ? 1 : subscriptionComponent.getExpire());
 
     }
 }

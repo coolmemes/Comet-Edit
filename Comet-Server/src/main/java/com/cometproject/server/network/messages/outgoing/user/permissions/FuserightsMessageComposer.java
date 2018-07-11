@@ -1,6 +1,7 @@
 package com.cometproject.server.network.messages.outgoing.user.permissions;
 
 import com.cometproject.api.networking.messages.IComposer;
+import com.cometproject.server.game.permissions.PermissionsManager;
 import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.protocol.headers.Composers;
 
@@ -23,6 +24,6 @@ public class FuserightsMessageComposer extends MessageComposer {
     public void compose(IComposer msg) {
         msg.writeInt(2);
         msg.writeInt(this.rank);
-        msg.writeBoolean(false);// Is ambassador!
+        msg.writeBoolean(true);// Is ambassador!
     }
 }

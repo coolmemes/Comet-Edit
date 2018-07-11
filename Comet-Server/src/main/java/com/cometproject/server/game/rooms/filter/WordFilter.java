@@ -28,20 +28,26 @@ public class WordFilter {
     public FilterResult filter(String message) {
         String filteredMessage = message;
 
-        if (CometSettings.wordFilterMode == FilterMode.STRICT) {
-            message = FilterUtil.process(message.toLowerCase());
-        }
+        message = FilterUtil.process(message.toLowerCase());
+
 
         for (Map.Entry<String, String> word : wordfilter.entrySet()) {
-            if (message.toLowerCase().contains(word.getKey())) {
-                if (CometSettings.wordFilterMode == FilterMode.STRICT)
-                    return new FilterResult(true, word.getKey());
-
+            if (message.toLowerCase().contains(word.getKey()))
+                return new FilterResult(true, word.getKey());
                 filteredMessage = filteredMessage.replace("(?i)" + word.getKey(), word.getValue());
             }
-        }
 
         return new FilterResult(filteredMessage, !message.equals(filteredMessage));
+    }
+
+    public void addWord(String word) {
+        FilterDao.insert(word);
+        Logger.getLogger(WordFilter.class.getName()).info("Loaded " + wordfilter.size() + " filtered words");
+    }
+
+    public void removeWord(String word) {
+        FilterDao.remove(word);
+        Logger.getLogger(WordFilter.class.getName()).info("Loaded " + wordfilter.size() + " filtered words");
     }
 
     public void save() {

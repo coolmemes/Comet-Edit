@@ -8,11 +8,6 @@ public class MassDucketsCommand extends MassCurrencyCommand {
     public String getPermission() {
         return "massduckets_command";
     }
-    
-    @Override
-    public String getParameter() { 
-        return "";
-    }
 
     @Override
     public String getDescription() {

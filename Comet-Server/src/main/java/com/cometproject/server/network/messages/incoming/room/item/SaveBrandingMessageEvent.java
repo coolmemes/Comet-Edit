@@ -1,6 +1,9 @@
 package com.cometproject.server.network.messages.incoming.room.item;
 
+import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
+import com.cometproject.server.game.rooms.objects.entities.effects.PlayerEffect;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
+import com.cometproject.server.game.rooms.objects.items.types.floor.ProviderTileFloorItem;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.room.items.UpdateFloorItemMessageComposer;
@@ -26,12 +29,22 @@ public class SaveBrandingMessageEvent implements Event {
             data = data + (char) 9 + msg.readString();
         }
 
-        data = data.replace("https", "http");
-
         RoomItemFloor item = room.getItems().getFloorItem(brandingId);
         item.setExtraData(data);
-
         item.sendUpdate();
         item.saveData();
+
+        if(item instanceof ProviderTileFloorItem) {
+            int effectId = new Integer(data.split("effectId")[1].trim());
+            int danceId = new Integer(data.split("danceId")[1].trim());
+            int handitemId = new Integer(data.split("handitemId")[1].trim());
+
+            if(effectId == 102 || effectId == 178 || effectId == 187) { return; }
+
+            for(RoomEntity entity : item.getEntitiesOnItem()) {
+                item.onEntityPreStepOn(entity);
+                item.onEntityStepOn(entity);
+            }
+        }
     }
 }

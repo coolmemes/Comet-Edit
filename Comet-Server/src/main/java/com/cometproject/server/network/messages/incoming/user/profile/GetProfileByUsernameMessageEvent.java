@@ -1,5 +1,7 @@
 package com.cometproject.server.network.messages.incoming.user.profile;
 
+import com.cometproject.server.game.moderation.BanManager;
+import com.cometproject.server.game.moderation.types.BanType;
 import com.cometproject.server.game.players.PlayerManager;
 import com.cometproject.server.game.players.data.PlayerData;
 import com.cometproject.server.game.players.types.PlayerStatistics;
@@ -9,6 +11,7 @@ import com.cometproject.server.network.messages.outgoing.user.profile.LoadProfil
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.storage.queries.groups.GroupDao;
+import com.cometproject.server.storage.queries.moderation.BanDao;
 import com.cometproject.server.storage.queries.player.PlayerDao;
 
 import java.util.List;
@@ -22,12 +25,15 @@ public class GetProfileByUsernameMessageEvent implements Event {
         PlayerData data = username.equals(client.getPlayer().getData().getUsername()) ? client.getPlayer().getData() : null;
         PlayerStatistics stats = data != null ? client.getPlayer().getStats() : null;
         List<Integer> groups = data != null ? client.getPlayer().getGroups() : null;
+        boolean hideOnline = data != null ? client.getPlayer().getSettings().getHideOnline() : false;
 
         if (data == null) {
             if (NetworkManager.getInstance().getSessions().getByPlayerUsername(username) != null) {
                 data = NetworkManager.getInstance().getSessions().getByPlayerUsername(username).getPlayer().getData();
                 stats = NetworkManager.getInstance().getSessions().getByPlayerUsername(username).getPlayer().getStats();
                 groups = NetworkManager.getInstance().getSessions().getByPlayerUsername(username).getPlayer().getGroups();
+                hideOnline = NetworkManager.getInstance().getSessions().getByPlayerUsername(username).getPlayer().getSettings().getHideOnline();
+
             }
         }
 
@@ -36,13 +42,13 @@ public class GetProfileByUsernameMessageEvent implements Event {
             data = PlayerManager.getInstance().getDataByPlayerId(id);
             stats = PlayerDao.getStatisticsById(id);
             groups = GroupDao.getIdsByPlayerId(id);
+            hideOnline = PlayerDao.getSettingsById(id).getHideOnline();
         }
 
         if (data == null) {
             return;
         }
 
-        client.send(new LoadProfileMessageComposer(data, stats, groups, client.getPlayer().getMessenger().getFriendById(data.getId()) != null, false));
-
+        client.send(new LoadProfileMessageComposer(data, stats, groups, client.getPlayer().getMessenger().getFriendById(data.getId()) != null, false, hideOnline, BanManager.getInstance().hasBan(Integer.toString(data.getId()), BanType.USER)));
     }
 }

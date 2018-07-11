@@ -8,7 +8,6 @@ import com.cometproject.server.game.rooms.objects.entities.pathfinding.types.Ent
 import com.cometproject.server.game.rooms.types.misc.ChatEmotion;
 import com.cometproject.server.network.NetworkManager;
 import com.cometproject.server.network.messages.outgoing.room.avatar.TalkMessageComposer;
-import com.cometproject.server.network.messages.outgoing.room.avatar.WhisperMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 
 import java.util.List;
@@ -18,12 +17,11 @@ public class PushCommand extends ChatCommand {
     @Override
     public void execute(Session client, String[] params) {
         if (params.length == 0) {
-            sendNotif(Locale.getOrDefault("command.user.invalid", "Invalid username!"), client);
+            sendNotif(Locale.get("command.push.invalidusername"), client);
             return;
         }
 
         if (client.getPlayer().getEntity().isRoomMuted() || client.getPlayer().getEntity().getRoom().getRights().hasMute(client.getPlayer().getId())) {
-            sendNotif(Locale.getOrDefault("command.user.muted", "You are muted."), client);
             return;
         }
 
@@ -31,12 +29,10 @@ public class PushCommand extends ChatCommand {
         Session user = NetworkManager.getInstance().getSessions().getByPlayerUsername(username);
 
         if (user == null) {
-            sendNotif(Locale.getOrDefault("command.user.offline", "This user is offline!"), client);
             return;
         }
 
         if (user.getPlayer().getEntity() == null) {
-            sendNotif(Locale.getOrDefault("command.user.notinroom", "This user is not in a room."), client);
             return;
         }
 
@@ -103,7 +99,7 @@ public class PushCommand extends ChatCommand {
             user.getPlayer().getEntity().setWalkingGoal(posX, posY);
 
             List<Square> path = EntityPathfinder.getInstance().makePath(user.getPlayer().getEntity(), user.getPlayer().getEntity().getWalkingGoal());
-            user.getPlayer().getEntity().unIdle();
+            if(!client.getPlayer().getEntity().getRoom().hasGameRoom()) user.getPlayer().getEntity().unIdle();
 
             if (user.getPlayer().getEntity().getWalkingPath() != null)
                 user.getPlayer().getEntity().getWalkingPath().clear();
@@ -113,20 +109,12 @@ public class PushCommand extends ChatCommand {
             client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(
                     new TalkMessageComposer(client.getPlayer().getEntity().getId(), Locale.get("command.push.message").replace("%playername%", user.getPlayer().getData().getUsername()), ChatEmotion.NONE, 0)
             );
-        } else {
-            client.getPlayer().getSession().send(new WhisperMessageComposer(client.getPlayer().getEntity().getId(), Locale.getOrDefault("command.notaround", "Oops! %playername% is not near, walk to this player.").replace("%playername%", user.getPlayer().getData().getUsername()), 34));
-            return;
         }
     }
 
     @Override
     public String getPermission() {
         return "push_command";
-    }
-
-    @Override
-    public String getParameter() {
-        return Locale.getOrDefault("command.parameter.username", "%username%");
     }
 
     @Override

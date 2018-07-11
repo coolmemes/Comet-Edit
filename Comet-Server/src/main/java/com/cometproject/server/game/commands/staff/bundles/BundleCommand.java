@@ -95,11 +95,6 @@ public class BundleCommand extends ChatCommand {
     public String getPermission() {
         return "bundle_command";
     }
-    
-    @Override
-    public String getParameter() {
-        return "";
-    }
 
     @Override
     public String getDescription() {

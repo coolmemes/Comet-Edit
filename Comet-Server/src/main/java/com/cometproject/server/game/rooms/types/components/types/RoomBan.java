@@ -3,24 +3,28 @@ package com.cometproject.server.game.rooms.types.components.types;
 public class RoomBan {
     private int playerId;
     private String playerName;
-    private int expireTimestamp;
+    private int ticksLeft;
 
     private boolean isPermanent;
 
-    public RoomBan(int playerId, String playerName, int expireTimestamp) {
+    public RoomBan(int playerId, String playerName, int ticksLeft) {
         this.playerId = playerId;
-        this.expireTimestamp = expireTimestamp;
+        this.ticksLeft = ticksLeft;
         this.playerName = playerName;
 
-        this.isPermanent = this.expireTimestamp == -1;
+        this.isPermanent = this.ticksLeft == -1;
     }
 
     public int getPlayerId() {
         return playerId;
     }
 
-    public int getExpireTimestamp() {
-        return expireTimestamp;
+    public int getTicksLeft() {
+        return ticksLeft;
+    }
+
+    public void decreaseTicks() {
+        this.ticksLeft--;
     }
 
     public boolean isPermanent() {

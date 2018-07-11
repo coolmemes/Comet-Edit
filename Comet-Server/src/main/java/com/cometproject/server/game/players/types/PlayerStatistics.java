@@ -13,6 +13,7 @@ public class PlayerStatistics implements IPlayerStatistics {
     private int achievementPoints;
 
     private int dailyRespects;
+    private int dailyRoomVotes;
     private int respectPoints;
 
     private int scratches;
@@ -28,6 +29,7 @@ public class PlayerStatistics implements IPlayerStatistics {
             this.achievementPoints = data.getInt("playerStats_achievementPoints");
             this.dailyRespects = data.getInt("playerStats_dailyRespects");
             this.respectPoints = data.getInt("playerStats_totalRespectPoints");
+            this.dailyRoomVotes = data.getInt("playerStats_dailyRoomVotes");
             this.helpTickets = data.getInt("playerStats_helpTickets");
             this.abusiveHelpTickets = data.getInt("playerStats_helpTicketsAbusive");
             this.cautions = data.getInt("playerStats_cautions");
@@ -38,6 +40,7 @@ public class PlayerStatistics implements IPlayerStatistics {
             this.achievementPoints = data.getInt("achievement_score");
             this.dailyRespects = data.getInt("daily_respects");
             this.respectPoints = data.getInt("total_respect_points");
+            this.dailyRoomVotes = data.getInt("daily_roomvotes");
             this.helpTickets = data.getInt("help_tickets");
             this.abusiveHelpTickets = data.getInt("help_tickets_abusive");
             this.cautions = data.getInt("cautions");
@@ -52,6 +55,7 @@ public class PlayerStatistics implements IPlayerStatistics {
         this.respectPoints = 0;
         this.dailyRespects = 3;
         this.scratches = 3;
+        this.dailyRoomVotes = 3;
         this.helpTickets = 0;
         this.abusiveHelpTickets = 0;
         this.cautions = 0;
@@ -82,6 +86,11 @@ public class PlayerStatistics implements IPlayerStatistics {
         this.save();
     }
 
+    public void decrementDailyRoomVotes() {
+        this.dailyRoomVotes--;
+        this.save();
+    }
+
     public void incrementBans(int amount) {
         this.bans += amount;
     }
@@ -94,9 +103,9 @@ public class PlayerStatistics implements IPlayerStatistics {
         return this.playerId;
     }
 
-    public int getDailyRespects() {
-        return this.dailyRespects;
-    }
+    public int getDailyRespects() { return this.dailyRespects; }
+
+    public int getDailyRoomVotes() { return this.dailyRoomVotes; }
 
     public int getRespectPoints() {
         return this.respectPoints;

@@ -13,6 +13,7 @@ import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.game.rooms.types.mapping.RoomTile;
 import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.settings.RoomRatingMessageComposer;
+import com.cometproject.server.network.messages.outgoing.user.details.UserNameChangeMessageComposer;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
@@ -24,8 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-public class
-EntityComponent {
+public class EntityComponent {
 
     private static Logger log = Logger.getLogger(EntityComponent.class.getName());
 
@@ -74,6 +74,22 @@ EntityComponent {
 
         return false;
     }
+
+    public void broadcastName(int roomId, int playerId, String nameColorAndAlt) {
+        for (RoomEntity entity : this.entities.values()) {
+            if (entity.getEntityType() == RoomEntityType.PLAYER) {
+                PlayerEntity playerEntity = (PlayerEntity) entity;
+                if (playerEntity.getPlayer() == null)
+                    continue;
+
+                if (playerEntity.getPlayer().getSettings().isUseOldChat()) {
+                } else {
+                    playerEntity.getPlayer().getSession().send(new UserNameChangeMessageComposer(roomId, playerId, nameColorAndAlt));
+                }
+            }
+        }
+    }
+
 
     public PlayerEntity createEntity(Player player) {
         Position startPosition = new Position(this.getRoom().getModel().getDoorX(), this.getRoom().getModel().getDoorY(), this.getRoom().getModel().getDoorZ());
@@ -204,7 +220,7 @@ EntityComponent {
         for (RoomEntity entity : this.getAllEntities().values()) {
             if (entity.getUsername() == null) continue;
 
-            if (entity.getUsername().equalsIgnoreCase(name) && entity.getEntityType() == type) {
+            if (entity.getUsername().equals(name) && entity.getEntityType() == type) {
                 return entity;
             }
         }

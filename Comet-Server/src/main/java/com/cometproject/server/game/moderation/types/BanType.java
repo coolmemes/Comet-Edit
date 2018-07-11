@@ -3,9 +3,10 @@ package com.cometproject.server.game.moderation.types;
 public enum BanType {
     IP,
     USER,
+    MUTE,
     MACHINE;
 
     public static BanType getType(String type) {
-        return type.equals("ip") ? IP : type.equals("user") ? USER : MACHINE;
+        return type.equals("ip") ? IP : type.equals("user") ? USER: type.equals("mute") ? MUTE : MACHINE;
     }
 }

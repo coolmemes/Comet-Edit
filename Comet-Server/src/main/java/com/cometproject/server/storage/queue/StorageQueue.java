@@ -1,9 +1,9 @@
 package com.cometproject.server.storage.queue;
 
 import com.cometproject.server.tasks.CometTask;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 
-public interface StorageQueue<T> extends Initialisable, CometTask {
+public interface StorageQueue<T> extends Initializable, CometTask {
 
     void queueSave(T object);
 

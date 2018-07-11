@@ -3,11 +3,6 @@ package com.cometproject.server.game.groups.types.components.membership;
 import com.cometproject.server.game.groups.types.Group;
 import com.cometproject.server.game.groups.types.GroupMember;
 import com.cometproject.server.game.groups.types.components.GroupComponent;
-import com.cometproject.server.network.NetworkManager;
-import com.cometproject.server.network.messages.composers.MessageComposer;
-import com.cometproject.server.network.sessions.Session;
-import com.cometproject.server.network.sessions.SessionManager;
-import com.cometproject.server.storage.cache.CacheManager;
 import com.cometproject.server.storage.queries.groups.GroupMemberDao;
 import org.apache.commons.collections4.map.ListOrderedMap;
 import org.apache.commons.collections4.set.ListOrderedSet;
@@ -58,11 +53,11 @@ public class MembershipComponent implements GroupComponent {
      * Load members of this group from the database
      */
     private void loadMemberships() {
-        for (GroupMember groupMember : this.group.getGroupDataObject() != null ? this.group.getGroupDataObject().getGroupMembers() : GroupMemberDao.getAllByGroupId(this.group.getId())) {
+        for (GroupMember groupMember : GroupMemberDao.getAllByGroupId(this.group.getId())) {
             this.createMembership(groupMember);
         }
 
-        for (Integer playerId : this.group.getGroupDataObject() != null ? this.group.getGroupDataObject().getGroupRequests() : GroupMemberDao.getAllRequestsByGroupId(this.group.getId())) {
+        for (Integer playerId : GroupMemberDao.getAllRequestsByGroupId(this.group.getId())) {
             this.groupMembershipRequests.add(playerId);
         }
     }
@@ -73,12 +68,8 @@ public class MembershipComponent implements GroupComponent {
      * @param groupMember The new member
      */
     public void createMembership(GroupMember groupMember) {
-        boolean needsCommit = false;
-        
-        if (groupMember.getMembershipId() == 0) {
+        if (groupMember.getMembershipId() == 0)
             groupMember.setMembershipId(GroupMemberDao.create(groupMember));
-            needsCommit = true;
-        }
 
         if (groupMembers.containsKey(groupMember.getPlayerId()))
             groupMembers.remove(groupMember.getPlayerId());
@@ -87,10 +78,6 @@ public class MembershipComponent implements GroupComponent {
             this.groupAdministrators.add(groupMember.getPlayerId());
 
         groupMembers.put(groupMember.getPlayerId(), groupMember);
-
-        if(needsCommit) {
-            this.group.commit();
-        }
     }
 
     /**
@@ -110,8 +97,6 @@ public class MembershipComponent implements GroupComponent {
 
         if (groupAdministrators.contains(playerId))
             groupAdministrators.remove(playerId);
-
-        this.group.commit();
     }
 
     /**
@@ -128,8 +113,6 @@ public class MembershipComponent implements GroupComponent {
 
         groupMembershipRequests.add(playerId);
         GroupMemberDao.createRequest(this.group.getId(), playerId);
-
-        this.group.commit();
     }
 
     /**
@@ -153,23 +136,6 @@ public class MembershipComponent implements GroupComponent {
         groupMembershipRequests.remove(playerId);
 
         GroupMemberDao.deleteRequest(this.group.getId(), playerId);
-    }
-
-    /**
-     * Broadcasts a message to every online group member
-     * @param messageComposer The message payload to send
-     * @param sender The sender (The sender will not be sent the message)
-     */
-    public void broadcastMessage(final MessageComposer messageComposer, int sender) {
-        for(GroupMember groupMember : this.getMembersAsList()) {
-            if(groupMember.getPlayerId() == sender) continue;
-
-            final Session session = NetworkManager.getInstance().getSessions().getByPlayerId(groupMember.getPlayerId());
-
-            if(session != null) {
-                session.send(messageComposer);
-            }
-        }
     }
 
     /**

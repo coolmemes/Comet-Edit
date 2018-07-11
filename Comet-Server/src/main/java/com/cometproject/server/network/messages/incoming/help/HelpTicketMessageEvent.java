@@ -6,6 +6,9 @@ import com.cometproject.server.game.moderation.ModerationManager;
 import com.cometproject.server.game.rooms.types.components.types.ChatMessage;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.help.TicketSentMessageComposer;
+import com.cometproject.server.network.messages.outgoing.moderation.BullyReportRequestMessageComposer;
+import com.cometproject.server.network.messages.outgoing.moderation.BullyReportedMessageMessageComposer;
+import com.cometproject.server.network.messages.outgoing.notification.AdvancedAlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.AlertMessageComposer;
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.network.sessions.Session;
@@ -18,10 +21,10 @@ public class HelpTicketMessageEvent implements Event {
     public void handle(Session client, MessageEvent msg) {
         boolean hasActiveTicket = ModerationManager.getInstance().getActiveTicketByPlayerId(client.getPlayer().getId()) != null;
 
-        if (hasActiveTicket) {
+        /*if (hasActiveTicket) {
             client.send(new AlertMessageComposer(Locale.get("help.ticket.pending.title"), Locale.get("help.ticket.pending.message")));
             return;
-        }
+        }*/
 
         String message = msg.readString();
         int category = msg.readInt();
@@ -46,7 +49,12 @@ public class HelpTicketMessageEvent implements Event {
             chatMessages.add(new ChatMessage(playerId, chatMessage));
         }
 
-        ModerationManager.getInstance().createTicket(client.getPlayer().getId(), message, category, reportedId, timestamp, roomId, chatMessages);
-        client.send(new TicketSentMessageComposer());
+        if(category != 12) {
+            ModerationManager.getInstance().createTicket(client.getPlayer().getId(), message, category, reportedId, timestamp, roomId, chatMessages);
+            client.send(new TicketSentMessageComposer());
+        } else {
+            // Create class with 'cases' + chatlogs.
+            client.send(new BullyReportedMessageMessageComposer(4));
+        }
     }
 }

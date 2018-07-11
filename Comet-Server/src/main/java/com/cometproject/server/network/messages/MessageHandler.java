@@ -1,18 +1,25 @@
 package com.cometproject.server.network.messages;
 
 import com.cometproject.server.boot.Comet;
-import com.cometproject.server.config.Configuration;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.incoming.catalog.*;
 import com.cometproject.server.network.messages.incoming.catalog.ads.CatalogPromotionGetRoomsMessageEvent;
 import com.cometproject.server.network.messages.incoming.catalog.ads.PromoteRoomMessageEvent;
 import com.cometproject.server.network.messages.incoming.catalog.ads.PromotionUpdateMessageEvent;
+import com.cometproject.server.network.messages.incoming.catalog.club.GetClubPresentMessageEvent;
+import com.cometproject.server.network.messages.incoming.catalog.club.GetPresentsPageMessageEvent;
+import com.cometproject.server.network.messages.incoming.catalog.club.GetSubscriptionPageMessageEvent;
 import com.cometproject.server.network.messages.incoming.catalog.data.GetGiftWrappingConfigurationMessageEvent;
 import com.cometproject.server.network.messages.incoming.catalog.groups.BuyGroupDialogMessageEvent;
 import com.cometproject.server.network.messages.incoming.catalog.groups.BuyGroupMessageEvent;
 import com.cometproject.server.network.messages.incoming.catalog.groups.GroupFurnitureCatalogMessageEvent;
 import com.cometproject.server.network.messages.incoming.catalog.pets.PetRacesMessageEvent;
 import com.cometproject.server.network.messages.incoming.catalog.pets.ValidatePetNameMessageEvent;
+import com.cometproject.server.network.messages.incoming.catalog.recycler.GetFurniMaticBoxesPageEvent;
+import com.cometproject.server.network.messages.incoming.catalog.recycler.GetFurniMaticFinalBoxEvent;
+import com.cometproject.server.network.messages.incoming.catalog.recycler.GetFurniMaticRewardsPageEvent;
+import com.cometproject.server.network.messages.incoming.crafting.*;
+import com.cometproject.server.network.messages.incoming.gamecenter.*;
 import com.cometproject.server.network.messages.incoming.group.*;
 import com.cometproject.server.network.messages.incoming.group.favourite.ClearFavouriteGroupMessageEvent;
 import com.cometproject.server.network.messages.incoming.group.favourite.SetFavouriteGroupMessageEvent;
@@ -22,16 +29,16 @@ import com.cometproject.server.network.messages.incoming.group.forum.settings.Sa
 import com.cometproject.server.network.messages.incoming.group.forum.threads.*;
 import com.cometproject.server.network.messages.incoming.group.settings.*;
 import com.cometproject.server.network.messages.incoming.handshake.*;
-import com.cometproject.server.network.messages.incoming.help.GetSanctionStatusEvent;
 import com.cometproject.server.network.messages.incoming.help.HelpTicketMessageEvent;
 import com.cometproject.server.network.messages.incoming.help.InitHelpToolMessageEvent;
-import com.cometproject.server.network.messages.incoming.help.guides.GuideHandleHelpRequestMessageEvent;
-import com.cometproject.server.network.messages.incoming.help.guides.OpenGuideToolMessageEvent;
-import com.cometproject.server.network.messages.incoming.help.guides.RequestGuideAssistanceMessageEvent;
 import com.cometproject.server.network.messages.incoming.landing.LandingLoadWidgetMessageEvent;
 import com.cometproject.server.network.messages.incoming.landing.RefreshPromoArticlesMessageEvent;
+import com.cometproject.server.network.messages.incoming.marketplace.*;
 import com.cometproject.server.network.messages.incoming.messenger.*;
 import com.cometproject.server.network.messages.incoming.moderation.*;
+import com.cometproject.server.network.messages.incoming.moderation.guides.guardian.*;
+import com.cometproject.server.network.messages.incoming.moderation.ambassador.SendAmbassadorAlertMessageEvent;
+import com.cometproject.server.network.messages.incoming.moderation.guides.OpenGuideToolMessageEvent;
 import com.cometproject.server.network.messages.incoming.moderation.tickets.ModToolCloseIssueMessageEvent;
 import com.cometproject.server.network.messages.incoming.moderation.tickets.ModToolPickTicketMessageEvent;
 import com.cometproject.server.network.messages.incoming.moderation.tickets.ModToolReleaseIssueMessageEvent;
@@ -42,7 +49,9 @@ import com.cometproject.server.network.messages.incoming.music.playlist.Playlist
 import com.cometproject.server.network.messages.incoming.music.playlist.PlaylistMessageEvent;
 import com.cometproject.server.network.messages.incoming.music.playlist.PlaylistRemoveMessageEvent;
 import com.cometproject.server.network.messages.incoming.navigator.*;
-import com.cometproject.server.network.messages.incoming.navigator.updated.*;
+import com.cometproject.server.network.messages.incoming.navigator.updated.InitializeNewNavigatorMessageEvent;
+import com.cometproject.server.network.messages.incoming.navigator.updated.NewNavigatorSearchMessageEvent;
+import com.cometproject.server.network.messages.incoming.nuxs.NewUserExperienceGiftOfferParserEvent;
 import com.cometproject.server.network.messages.incoming.performance.EventLogMessageEvent;
 import com.cometproject.server.network.messages.incoming.performance.RequestLatencyTestMessageEvent;
 import com.cometproject.server.network.messages.incoming.polls.GetPollMessageEvent;
@@ -52,15 +61,14 @@ import com.cometproject.server.network.messages.incoming.quests.OpenQuestsMessag
 import com.cometproject.server.network.messages.incoming.quests.StartQuestMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.access.AnswerDoorbellMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.access.LoadRoomByDoorBellMessageEvent;
+import com.cometproject.server.network.messages.incoming.room.access.SpectateRoomMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.action.*;
 import com.cometproject.server.network.messages.incoming.room.bots.BotConfigMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.bots.ModifyBotMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.bots.PlaceBotMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.bots.RemoveBotMessageEvent;
-import com.cometproject.server.network.messages.incoming.room.engine.AddUserToRoomMessageEvent;
-import com.cometproject.server.network.messages.incoming.room.engine.FollowRoomInfoMessageEvent;
-import com.cometproject.server.network.messages.incoming.room.engine.GetFurnitureAliasesMessageEvent;
-import com.cometproject.server.network.messages.incoming.room.engine.InitializeRoomMessageEvent;
+import com.cometproject.server.network.messages.incoming.room.competition.*;
+import com.cometproject.server.network.messages.incoming.room.engine.*;
 import com.cometproject.server.network.messages.incoming.room.filter.EditWordFilterMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.filter.WordFilterListMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.floor.GetTilesInUseMessageEvent;
@@ -72,7 +80,7 @@ import com.cometproject.server.network.messages.incoming.room.item.mannequins.Sa
 import com.cometproject.server.network.messages.incoming.room.item.mannequins.SaveMannequinMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.item.stickies.DeletePostItMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.item.stickies.OpenPostItMessageEvent;
-import com.cometproject.server.network.messages.incoming.room.item.stickies.PlacePostItMessageEvent;
+import com.cometproject.server.network.messages.incoming.room.item.stickies.PlacePostitMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.item.stickies.SavePostItMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.item.wired.SaveWiredDataMessageEvent;
 import com.cometproject.server.network.messages.incoming.room.item.wired.UpdateSnapshotsMessageEvent;
@@ -85,18 +93,28 @@ import com.cometproject.server.network.messages.incoming.room.pets.horse.RideHor
 import com.cometproject.server.network.messages.incoming.room.settings.*;
 import com.cometproject.server.network.messages.incoming.room.trading.*;
 import com.cometproject.server.network.messages.incoming.user.achievements.AchievementsListMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.camera.CameraPhotoPreviewMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.camera.CameraPhotoPublishMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.camera.CameraPhotoPurchaseMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.camera.CameraPriceMessageEvent;
 import com.cometproject.server.network.messages.incoming.user.club.ClubStatusMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.club.GetSubscriptionCenterMessageEvent;
 import com.cometproject.server.network.messages.incoming.user.details.*;
 import com.cometproject.server.network.messages.incoming.user.inventory.*;
 import com.cometproject.server.network.messages.incoming.user.profile.*;
+import com.cometproject.server.network.messages.incoming.user.talents.GetTalentTrackMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.talents.SafetyQuizAnsweredMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.verification.AcceptSMSVerificationMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.verification.GetSMSWindowMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.verification.VerifyEmailMessageEvent;
+import com.cometproject.server.network.messages.incoming.user.verification.VerifySMSMessageEvent;
 import com.cometproject.server.network.messages.incoming.user.wardrobe.ChangeLooksMessageEvent;
 import com.cometproject.server.network.messages.incoming.user.wardrobe.SaveWardrobeMessageEvent;
 import com.cometproject.server.network.messages.incoming.user.wardrobe.WardrobeMessageEvent;
 import com.cometproject.server.network.messages.incoming.user.youtube.LoadPlaylistMessageEvent;
 import com.cometproject.server.network.messages.incoming.user.youtube.NextVideoMessageEvent;
 import com.cometproject.server.network.messages.incoming.user.youtube.PlayVideoMessageEvent;
-import com.cometproject.server.network.messages.outgoing.group.DeleteGroupMessageEvent;
-import com.cometproject.server.network.messages.outgoing.handshake.ConfirmUsernameMessageEvent;
+import com.cometproject.server.network.messages.incoming.group.DeleteGroupMessageEvent;
 import com.cometproject.server.network.messages.types.tasks.MessageEventTask;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.protocol.headers.Events;
@@ -114,15 +132,15 @@ public final class MessageHandler {
     private final boolean asyncEventExecution;
 
     public MessageHandler() {
-        this.asyncEventExecution = Boolean.parseBoolean((String) Configuration.currentConfig().getOrDefault("comet.network.alternativePacketHandling.enabled", "false"));
-//        this.eventExecutor = asyncEventExecution ? Executors.newFixedThreadPool(Integer.parseInt((String) Configuration.currentConfig().getOrDefault("comet.network.alternativePacketHandling.threads", "8"))) : null;
+        this.asyncEventExecution = Boolean.parseBoolean((String) Comet.getServer().getConfig().getOrDefault("comet.network.alternativePacketHandling.enabled", "false"));
+//        this.eventExecutor = asyncEventExecution ? Executors.newFixedThreadPool(Integer.parseInt((String) Comet.getServer().getConfig().getOrDefault("comet.network.alternativePacketHandling.threads", "8"))) : null;
 
         if (this.asyncEventExecution) {
-            switch ((String) Configuration.currentConfig().getOrDefault("comet.network.alternativePacketHandling.type", "threadpool")) {
+            switch ((String) Comet.getServer().getConfig().getOrDefault("comet.network.alternativePacketHandling.type", "threadpool")) {
                 default:
                     log.info("Using thread-pool event executor");
-                    this.eventExecutor = new ThreadPoolExecutor(Integer.parseInt((String) Configuration.currentConfig().getOrDefault("comet.network.alternativePacketHandling.coreSize", "8")), // core size
-                            Integer.parseInt((String) Configuration.currentConfig().getOrDefault("comet.network.alternativePacketHandling.maxSize", "32")), // max size
+                    this.eventExecutor = new ThreadPoolExecutor(Integer.parseInt((String) Comet.getServer().getConfig().getOrDefault("comet.network.alternativePacketHandling.coreSize", "8")), // core size
+                            Integer.parseInt((String) Comet.getServer().getConfig().getOrDefault("comet.network.alternativePacketHandling.maxSize", "32")), // max size
                             10 * 60, // idle timeout
                             TimeUnit.SECONDS,
                             new LinkedBlockingQueue<>());
@@ -130,7 +148,7 @@ public final class MessageHandler {
 
                 case "forkjoin":
                     log.info("Using fork-join event executor");
-                    this.eventExecutor = new ForkJoinPool(Integer.parseInt((String) Configuration.currentConfig().getOrDefault("comet.network.alternativePacketHandling.coreSize", 16)), ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true);
+                    this.eventExecutor = new ForkJoinPool(Integer.parseInt((String) Comet.getServer().getConfig().getOrDefault("comet.network.alternativePacketHandling.coreSize", 16)), ForkJoinPool.defaultForkJoinWorkerThreadFactory, null, true);
                     break;
             }
         } else {
@@ -165,14 +183,16 @@ public final class MessageHandler {
         this.registerMisc();
         this.registerMusic();
         this.registerCamera();
-        this.registerGuideTool();
+        this.registerGameCenter();
+        this.registerMarketplace();
+        this.registerCrafting();
 
         log.info("Loaded " + this.getMessages().size() + " message events");
     }
 
     private void registerMisc() {
         this.getMessages().put(Events.LatencyTestMessageEvent, new RequestLatencyTestMessageEvent());
-        this.getMessages().put(Events.EventLogMessageEvent, new EventLogMessageEvent());
+        this.getMessages().put(Events.EventTrackerMessageEvent, new EventLogMessageEvent());
     }
 
     public void registerHandshake() {
@@ -181,7 +201,6 @@ public final class MessageHandler {
         this.getMessages().put(Events.GenerateSecretKeyMessageEvent, new GenerateSecretKeyMessageEvent());
         this.getMessages().put(Events.SSOTicketMessageEvent, new SSOTicketMessageEvent());
         this.getMessages().put(Events.UniqueIDMessageEvent, new UniqueIdMessageEvent());
-        this.getMessages().put(Events.ConfirmUsernameMessageEvent, new ConfirmUsernameMessageEvent());
     }
 
     public void registerModTool() {
@@ -206,7 +225,19 @@ public final class MessageHandler {
     public void registerHelpTool() {
         this.getMessages().put(Events.OpenHelpToolMessageEvent, new InitHelpToolMessageEvent());
         this.getMessages().put(Events.SubmitNewTicketMessageEvent, new HelpTicketMessageEvent());
-        this.getMessages().put(Events.GetSanctionStatusMessageEvent, new GetSanctionStatusEvent());
+        this.getMessages().put(Events.OpenGuideToolMessageEvent, new OpenGuideToolMessageEvent());
+        this.getMessages().put(Events.GuardianAcceptRequestMessageEvent, new GuardianAcceptRequestMessageEvent());
+        this.getMessages().put(Events.GuardianNoUpdatesWantedMessageEvent, new GuardianNoUpdatesWantedMessageEvent());
+        this.getMessages().put(Events.GuardianVoteMessageEvent, new GuardianVoteMessageEvent());
+        this.getMessages().put(Events.GuardianHandleReportMessageEvent, new GuardianHandleReportMessageEvent());
+    }
+
+    public void registerCamera(){
+        this.getMessages().put(Events.CameraPhotoPreviewMessageEvent, new CameraPhotoPreviewMessageEvent(false));
+        this.getMessages().put(Events.CameraPhotoPublishMessageEvent, new CameraPhotoPublishMessageEvent());
+        this.getMessages().put(Events.CameraPhotoPurchaseMessageEvent, new CameraPhotoPurchaseMessageEvent());
+        this.getMessages().put(Events.CameraPriceMessageEvent, new CameraPriceMessageEvent());
+        this.getMessages().put(Events.CameraThumbnailMessageEvent, new CameraPhotoPreviewMessageEvent(true));
     }
 
     public void registerMessenger() {
@@ -219,25 +250,31 @@ public final class MessageHandler {
         this.getMessages().put(Events.RemoveBuddyMessageEvent, new DeleteFriendsMessageEvent());
         this.getMessages().put(Events.SendRoomInviteMessageEvent, new InviteFriendsMessageEvent());
         this.getMessages().put(Events.DeclineBuddyMessageEvent, new DeclineFriendshipMessageEvent());
+        this.getMessages().put(Events.ReportFriendMessageEvent, new ReportFriendMessageEvent());
     }
 
     public void registerNavigator() {
         this.getMessages().put(Events.GetUserFlatCatsMessageEvent, new LoadCategoriesMessageEvent());
-        this.getMessages().put(Events.InitializeNavigatorMessageEvent, new InitializeNewNavigatorMessageEvent());
-        this.getMessages().put(Events.NavigatorSearchMessageEvent, new NewNavigatorSearchMessageEvent());
+        this.getMessages().put(Events.InitializeNewNavigatorMessageEvent, new InitializeNewNavigatorMessageEvent());
+        this.getMessages().put(Events.NewNavigatorSearchMessageEvent, new NewNavigatorSearchMessageEvent());
         this.getMessages().put(Events.CanCreateRoomMessageEvent, new CanCreateRoomMessageEvent());
         this.getMessages().put(Events.CreateFlatMessageEvent, new CreateRoomMessageEvent());
         this.getMessages().put(Events.GetEventCategoriesMessageEvent, new EventCategoriesMessageEvent());
         this.getMessages().put(Events.GetPromotableRoomsMessageEvent, new CatalogPromotionGetRoomsMessageEvent());
         this.getMessages().put(Events.StaffPickRoomMessageEvent, new AddToStaffPickedRoomsMessageEvent());
-        this.getMessages().put(Events.ResizeNavigatorMessageEvent, new ResizeNavigatorMessageEvent());
-        this.getMessages().put(Events.SaveNavigatorSearchMessageEvent, new SaveNavigatorSearchMessageEvent());
-        this.getMessages().put(Events.DeleteNavigatorSavedSearchMessageEvent, new DeleteNavigatorSavedSearchMessageEvent());
-        this.getMessages().put(Events.FindRandomFriendingRoomMessageEvent, new FindRandomFriendingRoomMessageEvent());
+        this.getMessages().put(Events.SpectateRoomMessageEvent, new SpectateRoomMessageEvent());
+    }
+
+    public void registerCrafting() {
+        this.getMessages().put(Events.GetCraftingRecipesAvailableMessageEvent, new GetCraftingRecipesAvailableMessageEvent());
+        this.getMessages().put(Events.CraftSecretMessageEvent, new CraftSecretMessageEvent());
+        this.getMessages().put(Events.ViewCraftingRecipeMessageEvent, new ViewCraftingRecipeMessageEvent());
+        this.getMessages().put(Events.ExecuteCraftingRecipeMessageEvent, new ExecuteCraftingRecipeMessageEvent());
+        this.getMessages().put(Events.GetCraftingItemMessageEvent, new GetCraftingItemMessageEvent());
     }
 
     public void registerUser() {
-        this.getMessages().put(Events.GetExtendedProfileMessageEvent, new GetProfileMessageEvent());
+        this.getMessages().put(Events.OpenPlayerProfileMessageEvent, new GetProfileMessageEvent());
         this.getMessages().put(Events.GetForumUserProfileMessageEvent, new GetProfileByUsernameMessageEvent());
         this.getMessages().put(Events.ScrGetUserInfoMessageEvent, new ClubStatusMessageEvent());
         this.getMessages().put(Events.InfoRetrieveMessageEvent, new InfoRetrieveMessageEvent());
@@ -253,15 +290,23 @@ public final class MessageHandler {
         this.getMessages().put(Events.UpdateNavigatorSettingsMessageEvent, new ChangeHomeRoomMessageEvent());
         this.getMessages().put(Events.SetSoundSettingsMessageEvent, new UpdateAudioSettingsMessageEvent());
         this.getMessages().put(Events.SetChatPreferenceMessageEvent, new UpdateChatStyleMessageEvent());
-        this.getMessages().put(Events.SetMessengerInviteStatusMessageEvent, new IgnoreInvitationsMessageEvent());
+        this.getMessages().put(Events.GetUserTagsMessageEvent, new GetUserTagsMessageEvent());
         this.getMessages().put(Events.ChangeNameMessageEvent, new ChangeNameMessageEvent());
         this.getMessages().put(Events.CheckValidNameMessageEvent, new CheckValidNameMessageEvent());
+        this.getMessages().put(Events.GetSMSWindowMessageEvent, new GetSMSWindowMessageEvent());
+        this.getMessages().put(Events.AcceptSMSVerificationMessageEvent, new AcceptSMSVerificationMessageEvent());
+        this.getMessages().put(Events.VerifySMSMessageEvent, new VerifySMSMessageEvent());
+        this.getMessages().put(Events.VerifyEmailMessageEvent, new VerifyEmailMessageEvent());
+        this.getMessages().put(Events.GetSubscriptionCenterMessageEvent, new GetSubscriptionCenterMessageEvent());
+        this.getMessages().put(Events.UpdateFocusPreferenceMessageEvent, new UpdateFocusPreferenceMessageEvent());
+        this.getMessages().put(Events.GetTalentTrackMessageEvent, new GetTalentTrackMessageEvent());
+        this.getMessages().put(Events.SafetyQuizAnsweredMessageEvent, new SafetyQuizAnsweredMessageEvent());
     }
 
     public void registerBots() {
         this.getMessages().put(Events.GetBotInventoryMessageEvent, new BotInventoryMessageEvent());
         this.getMessages().put(Events.PlaceBotMessageEvent, new PlaceBotMessageEvent());
-        this.getMessages().put(Events.CommandBotMessageEvent, new ModifyBotMessageEvent());
+        this.getMessages().put(Events.SaveBotActionMessageEvent, new ModifyBotMessageEvent());
         this.getMessages().put(Events.PickUpBotMessageEvent, new RemoveBotMessageEvent());
         this.getMessages().put(Events.OpenBotActionMessageEvent, new BotConfigMessageEvent());
     }
@@ -304,25 +349,28 @@ public final class MessageHandler {
         this.getMessages().put(Events.ToggleMuteToolMessageEvent, new MuteRoomMessageEvent());
         this.getMessages().put(Events.GiveRoomScoreMessageEvent, new RateRoomMessageEvent());
         this.getMessages().put(Events.GiveHandItemMessageEvent, new GiveHandItemMessageEvent());
-        this.getMessages().put(Events.UpdateFloorPropertiesMessageEvent, new SaveFloorMessageEvent());
+        this.getMessages().put(Events.SaveFloorPlanModelMessageEvent, new SaveFloorMessageEvent());
         this.getMessages().put(Events.InitializeFloorPlanSessionMessageEvent, new GetTilesInUseMessageEvent());
         this.getMessages().put(Events.IgnoreUserMessageEvent, new IgnoreUserMessageEvent());
         this.getMessages().put(Events.UnIgnoreUserMessageEvent, new UnignoreUserMessageEvent());
         this.getMessages().put(Events.RemoveMyRightsMessageEvent, new RemoveOwnRightsMessageEvent());
         this.getMessages().put(Events.SitMessageEvent, new SitMessageEvent());
         this.getMessages().put(Events.GetFurnitureAliasesMessageEvent, new GetFurnitureAliasesMessageEvent());
+        this.getMessages().put(Events.GetRoomCompetitionMessageEvent, new GetRoomCompetitionMessageEvent());
+        this.getMessages().put(Events.RoomCompetitionPublishMessageEvent, new RoomCompetitionPublishMessageEvent());
+        this.getMessages().put(Events.RoomCompetitionVoteMessageEvent, new RoomCompetitionVoteMessageEvent());
+        this.getMessages().put(Events.RoomCompetitionSendPhotoMessageEvent, new RoomCompetitionSendPhotoMessageEvent());
     }
 
     public void registerRoomTrade() {
         this.getMessages().put(Events.InitTradeMessageEvent, new BeginTradeMessageEvent());
-        this.getMessages().put(Events.TradingOfferItemMessageEvent, new SendOfferMessageEvent());
-        this.getMessages().put(Events.TradingOfferItemsMessageEvent, new TradingOfferItemsMessageEvent());
-        this.getMessages().put(Events.TradingRemoveItemMessageEvent, new CancelOfferMessageEvent());
-        this.getMessages().put(Events.TradingAcceptMessageEvent, new AcceptTradeMessageEvent());
-        this.getMessages().put(Events.TradingModifyMessageEvent, new UnacceptTradeMessageEvent());
         this.getMessages().put(Events.TradingCancelMessageEvent, new CancelTradeMessageEvent());
+        this.getMessages().put(Events.TradingCancelConfirmMessageEvent, new UnacceptTradeMessageEvent());
+        this.getMessages().put(Events.TradingOfferItemMessageEvent, new SendOfferMessageEvent());
+        this.getMessages().put(Events.TradingRemoveItemMessageEvent, new TradingRemoveItemMessageEvent());
+        this.getMessages().put(Events.TradingAcceptMessageEvent, new AcceptTradeMessageEvent());
         this.getMessages().put(Events.TradingConfirmMessageEvent, new ConfirmTradeMessageEvent());
-        this.getMessages().put(Events.TradingCancelConfirmMessageEvent, new CancelConfirmTradeMessageEvent());
+        this.getMessages().put(Events.TradingOfferItemsMessageEvent, new TradingOfferItemsMessageEvent());
     }
 
     public void registerRoomModeration() {
@@ -337,6 +385,8 @@ public final class MessageHandler {
         this.getMessages().put(Events.GetRoomRightsMessageEvent, new UsersWithRightsMessageEvent());
         this.getMessages().put(Events.GetRoomFilterListMessageEvent, new WordFilterListMessageEvent());
         this.getMessages().put(Events.ModifyRoomFilterListMessageEvent, new EditWordFilterMessageEvent());
+        this.getMessages().put(Events.SendAmbassadorAlertMessageEvent, new SendAmbassadorAlertMessageEvent());
+        this.getMessages().put(Events.ReportBullyMessageEvent, new ReportBullyMessageEvent());
     }
 
     public void registerRoomAccess() {
@@ -365,13 +415,13 @@ public final class MessageHandler {
         this.getMessages().put(Events.SetMannequinNameMessageEvent, new SaveMannequinMessageEvent());
         this.getMessages().put(Events.SetMannequinFigureMessageEvent, new SaveMannequinFigureMessageEvent());
         this.getMessages().put(Events.SetTonerMessageEvent, new SaveTonerMessageEvent());
-        this.getMessages().put(Events.SetObjectDataMessageEvent, new SaveBrandingMessageEvent());
+        this.getMessages().put(Events.SaveBrandingItemMessageEvent, new SaveBrandingMessageEvent());
         this.getMessages().put(Events.OpenGiftMessageEvent, new OpenGiftMessageEvent());
         this.getMessages().put(Events.GetMoodlightConfigMessageEvent, new UseMoodlightMessageEvent());
         this.getMessages().put(Events.ToggleMoodlightMessageEvent, new ToggleMoodlightMessageEvent());
-        this.getMessages().put(Events.RoomDimmerSavePresetMessageEvent, new UpdateMoodlightMessageEvent());
-        this.getMessages().put(Events.SetCustomStackingHeightMessageEvent, new SaveStackToolMessageEvent());
-        this.getMessages().put(Events.AddStickyNoteMessageEvent, new PlacePostItMessageEvent());
+        this.getMessages().put(Events.MoodlightUpdateMessageEvent, new UpdateMoodlightMessageEvent());
+        this.getMessages().put(Events.UpdateMagicTileMessageEvent, new SaveStackToolMessageEvent());
+        this.getMessages().put(Events.AddStickyNoteMessageEvent, new PlacePostitMessageEvent());
         this.getMessages().put(Events.GetStickyNoteMessageEvent, new OpenPostItMessageEvent());
         this.getMessages().put(Events.UpdateStickyNoteMessageEvent, new SavePostItMessageEvent());
         this.getMessages().put(Events.DeleteStickyNoteMessageEvent, new DeletePostItMessageEvent());
@@ -387,7 +437,18 @@ public final class MessageHandler {
         this.getMessages().put(Events.EditRoomPromotionMessageEvent, new PromotionUpdateMessageEvent());
     }
 
-    //
+    private void registerMarketplace() {
+        getMessages().put(Events.GetOffersMessageEvent, new GetOffersMessageEvent());
+        getMessages().put(Events.GetMarketplaceSettingsMessageEvent, new GetMarketplaceSettingsMessageEvent());
+        getMessages().put(Events.CanMakeOfferMessageEvent, new CanMakeOfferMessageEvent());
+        getMessages().put(Events.MakeOfferMessageEvent, new MakeOfferMessageEvent());
+        getMessages().put(Events.GetOwnOffersMessageEvent, new GetOwnOffersMessageEvent());
+        getMessages().put(Events.CancelOfferMessageEvent, new CancelOfferMessageEvent());
+        getMessages().put(Events.BuyOfferMessageEvent, new BuyOfferMessageEvent());
+        getMessages().put(Events.RedeemCoinsMessageEvent, new RedeemCoinsMessageEvent());
+        getMessages().put(Events.GetMarketplaceItemStatsMessageEvent, new GetMarketplaceItemStatsMessageEvent());
+    }
+
     public void registerCatalog() {
         this.getMessages().put(Events.GetCatalogIndexMessageEvent, new GetCataIndexMessageEvent());
         this.getMessages().put(Events.GetCatalogPageMessageEvent, new GetCataPageMessageEvent());
@@ -396,19 +457,25 @@ public final class MessageHandler {
         this.getMessages().put(Events.GetGroupCreationWindowMessageEvent, new BuyGroupDialogMessageEvent());
         this.getMessages().put(Events.PurchaseGroupMessageEvent, new BuyGroupMessageEvent());
         this.getMessages().put(Events.GetSellablePetBreedsMessageEvent, new PetRacesMessageEvent());
-        this.getMessages().put(Events.ApproveNameMessageEvent, new ValidatePetNameMessageEvent());
+        this.getMessages().put(Events.CheckPetNameMessageEvent, new ValidatePetNameMessageEvent());
         this.getMessages().put(Events.PurchaseFromCatalogAsGiftMessageEvent, new PurchaseGiftMessageEvent());
         this.getMessages().put(Events.GetGroupFurniConfigMessageEvent, new GroupFurnitureCatalogMessageEvent());
         this.getMessages().put(Events.GetCatalogOfferMessageEvent, new GetCatalogOfferMessageEvent());
+        this.getMessages().put(Events.GetFurniMaticBoxesPageMessageEvent, new GetFurniMaticBoxesPageEvent());
+        this.getMessages().put(Events.GetFurniMaticFinalBoxMessageEvent, new GetFurniMaticFinalBoxEvent());
+        this.getMessages().put(Events.GetFurniMaticRewardsPageMessageEvent, new GetFurniMaticRewardsPageEvent());
         this.getMessages().put(Events.RedeemVoucherMessageEvent, new RedeemVoucherMessageEvent());
+        this.getMessages().put(Events.NewUserExperienceGiftOfferParserEvent, new NewUserExperienceGiftOfferParserEvent());
+        this.getMessages().put(Events.GetSubscriptionPageMessageEvent, new GetSubscriptionPageMessageEvent());
+        this.getMessages().put(Events.GetPresentsPageMessageEvent, new GetPresentsPageMessageEvent());
+        this.getMessages().put(Events.GetClubPresentMessageEvent, new GetClubPresentMessageEvent());
     }
 
     public void registerLanding() {
         this.getMessages().put(Events.GetPromoArticlesMessageEvent, new RefreshPromoArticlesMessageEvent());
         this.getMessages().put(Events.RefreshCampaignMessageEvent, new LandingLoadWidgetMessageEvent());
     }
-
-    //
+//
     public void registerGroups() {
         this.getMessages().put(Events.GetGroupInfoMessageEvent, new GroupInformationMessageEvent());
         this.getMessages().put(Events.GetGroupMembersMessageEvent, new GroupMembersMessageEvent());
@@ -428,8 +495,7 @@ public final class MessageHandler {
         this.getMessages().put(Events.RemoveGroupFavouriteMessageEvent, new ClearFavouriteGroupMessageEvent());
         this.getMessages().put(Events.DeleteGroupMessageEvent, new DeleteGroupMessageEvent());
     }
-
-    //
+//
     public void registerGroupForums() {
         this.getMessages().put(Events.GetForumStatsMessageEvent, new ForumDataMessageEvent());
         this.getMessages().put(Events.UpdateForumSettingsMessageEvent, new SaveForumSettingsMessageEvent());
@@ -438,8 +504,8 @@ public final class MessageHandler {
         this.getMessages().put(Events.GetThreadDataMessageEvent, new ViewThreadMessageEvent());
         this.getMessages().put(Events.UpdateThreadMessageEvent, new UpdateThreadMessageEvent());
         this.getMessages().put(Events.GetForumsListDataMessageEvent, new GetForumsMessageEvent());
-        this.getMessages().put(Events.DeleteGroupThreadMessageEvent, new HideGroupForumPostMessageEvent());
-        this.getMessages().put(Events.DeleteGroupReplyMessageEvent, new HideGroupForumPostMessageEvent());
+        this.getMessages().put(Events.DeleteGroupThreadMessageEvent, new HideMessageMessageEvent());
+        this.getMessages().put(Events.DeleteGroupReplyMessageEvent, new HideMessageMessageEvent());
     }
 
     public void registerQuests() {
@@ -447,7 +513,6 @@ public final class MessageHandler {
         this.getMessages().put(Events.StartQuestMessageEvent, new StartQuestMessageEvent());
         this.getMessages().put(Events.CancelQuestMessageEvent, new CancelQuestMessageEvent());
     }
-
 
     public void registerMusic() {
         this.getMessages().put(Events.SongInventoryMessageEvent, new SongInventoryMessageEvent());
@@ -458,6 +523,14 @@ public final class MessageHandler {
         this.getMessages().put(Events.PlaylistMessageEvent, new PlaylistMessageEvent());
     }
 
+    public void registerGameCenter() {
+        this.getMessages().put(Events.GetGameAchievementsMessageEvent, new GetGameAchievementsMessageEvent());
+        this.getMessages().put(Events.GetGameListMessageEvent, new GetGameListMessageEvent());
+        this.getMessages().put(Events.GetGameStatusMessageEvent, new GetGameStatusMessageEvent());
+        this.getMessages().put(Events.JoinGameQueueMessageEvent, new JoinGameQueueMessageEvent());
+    }
+
+
     public void registerPolls() {
         this.getMessages().put(Events.GetPollMessageEvent, new GetPollMessageEvent());
         this.getMessages().put(Events.SubmitPollAnswerMessageEvent, new SubmitPollAnswerMessageEvent());
@@ -467,16 +540,6 @@ public final class MessageHandler {
         this.getMessages().put(Events.GetAchievementsMessageEvent, new AchievementsListMessageEvent());
     }
 
-    private void registerCamera() {
-//        this.getMessages().put(Events.TakePhotoMessageEvent, new TakePhotoMessageEvent());
-    }
-
-    public void registerGuideTool() {
-        this.getMessages().put(Events.RequestGuideToolMessageEvent, new OpenGuideToolMessageEvent());
-        this.getMessages().put(Events.RequestGuideAssistanceMessageEvent, new RequestGuideAssistanceMessageEvent());
-        this.getMessages().put(Events.GuideHandleHelpRequestMessageEvent, new GuideHandleHelpRequestMessageEvent());
-    }
-
     public void handle(MessageEvent message, Session client) {
         final Short header = message.getId();
 
@@ -484,7 +547,7 @@ public final class MessageHandler {
             log.debug(message.toString());
         }
 
-        if (!Comet.isRunning)
+        if(!Comet.isRunning)
             return;
 
         if (this.getMessages().containsKey(header)) {

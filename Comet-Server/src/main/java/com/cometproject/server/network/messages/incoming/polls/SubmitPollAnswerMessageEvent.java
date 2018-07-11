@@ -5,7 +5,6 @@ import com.cometproject.server.game.polls.PollManager;
 import com.cometproject.server.game.polls.types.Poll;
 import com.cometproject.server.game.polls.types.PollQuestion;
 import com.cometproject.server.game.polls.types.questions.MultipleChoiceQuestion;
-import com.cometproject.server.game.polls.types.questions.WordedPollQuestion;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.notification.AlertMessageComposer;
@@ -13,12 +12,6 @@ import com.cometproject.server.network.messages.outgoing.room.polls.QuickPollVot
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.storage.queries.polls.PollDao;
-import com.cometproject.server.utilities.JsonUtil;
-import com.ctc.wstx.util.StringUtil;
-import com.google.common.collect.Lists;
-import org.apache.commons.lang.StringUtils;
-
-import java.util.List;
 
 public class SubmitPollAnswerMessageEvent implements Event {
     @Override
@@ -26,6 +19,8 @@ public class SubmitPollAnswerMessageEvent implements Event {
         final int pollId = msg.readInt();
         final int questionId = msg.readInt();
         final int count = msg.readInt();
+
+        String answer = msg.readString();
 
         if (questionId == -1) {
             if (client.getPlayer().getEntity() == null || client.getPlayer().getEntity().getRoom() == null)
@@ -40,8 +35,6 @@ public class SubmitPollAnswerMessageEvent implements Event {
             if (room.getYesVotes().contains(client.getPlayer().getId()) || room.getNoVotes().contains(client.getPlayer().getId())) {
                 return;
             }
-
-            String answer = msg.readString();
 
             if (answer.equals("1")) {
                 room.getYesVotes().add(client.getPlayer().getId());
@@ -62,39 +55,28 @@ public class SubmitPollAnswerMessageEvent implements Event {
                 return;
             }
 
-            String answer;
-
             if (pollQuestion instanceof MultipleChoiceQuestion) {
                 try {
-                    final List<String> answers = Lists.newArrayList();
+                    int answerIndex = Integer.parseInt(answer);
 
-                    for (int i = 0; i < count; i++) {
-                        final String answerStr = msg.readString();
-
-                        if (!StringUtils.isNumeric(answerStr)) continue;
-
-                        final int answerIndex = Integer.parseInt(answerStr);
-
-                        answers.add(((MultipleChoiceQuestion) pollQuestion).getChoices().get(answerIndex));
+                    if (answerIndex < 0 || answerIndex >= ((MultipleChoiceQuestion) pollQuestion).getChoices().size()) {
+                        client.send(new AlertMessageComposer(Locale.getOrDefault("polls.invalid.answer", "Invalid answer!")));
+                        return;
                     }
 
-                    answer = JsonUtil.getInstance().toJson(answers);
+                    answer = ((MultipleChoiceQuestion) pollQuestion).getChoices().get(answerIndex);
                 } catch (Exception e) {
                     client.send(new AlertMessageComposer(Locale.getOrDefault("polls.invalid.answer", "Invalid answer!")));
                     return;
                 }
-            } else {
-                answer = msg.readString();
             }
 
             if (PollDao.hasAnswered(client.getPlayer().getId(), pollId, questionId)) {
+                client.send(new AlertMessageComposer(Locale.getOrDefault("polls.already.answerered", "You've already answered this question!")));
                 return;
             }
 
-            if(poll.isFinalQuestion(questionId)) {
-                poll.onPlayerFinishedPoll(client.getPlayer());
-            }
-
+            poll.getPlayersAnswered().add(client.getPlayer().getId());
             PollDao.saveAnswer(client.getPlayer().getId(), pollId, questionId, answer);
         }
     }

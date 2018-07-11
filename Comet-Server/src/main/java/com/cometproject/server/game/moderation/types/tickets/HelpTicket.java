@@ -54,7 +54,7 @@ public class HelpTicket {
     public void compose(IComposer msg) {
         msg.writeInt(this.getId());
         msg.writeInt(this.getState().getTabId());
-        msg.writeInt(3); // style
+        msg.writeInt(12); // style
         msg.writeInt(this.getCategoryId());
         msg.writeInt((int) (Comet.getTime() - this.getDateSubmitted()) * 1000);
         msg.writeInt(1); // Priority.

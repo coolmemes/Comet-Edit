@@ -60,6 +60,8 @@ public class PermissionsDao {
                 data.putIfAbsent(resultSet.getInt("id"), new Rank(
                         resultSet.getInt("id"),
                         resultSet.getString("name"),
+                        resultSet.getBoolean("have_tag"),
+                        resultSet.getString("tag_color"),
                         resultSet.getString("flood_bypass").equals("1"),
                         resultSet.getInt("flood_time"),
                         resultSet.getString("disconnectable").equals("1"),
@@ -76,6 +78,7 @@ public class PermissionsDao {
                         resultSet.getString("room_see_whispers").equals("1"),
                         resultSet.getString("messenger_staff_chat").equals("1"),
                         resultSet.getInt("messenger_max_friends"),
+                        resultSet.getString("ambassador").equals("1"),
                         resultSet.getString("about_detailed").equals("1"),
                         resultSet.getString("about_stats").equals("1")));
             }
@@ -121,7 +124,6 @@ public class PermissionsDao {
 
         return data;
     }
-
     public static Map<String, OverrideCommandPermission> getOverrideCommandPermissions() {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
@@ -179,4 +181,5 @@ public class PermissionsDao {
 
         return data;
     }
+
 }

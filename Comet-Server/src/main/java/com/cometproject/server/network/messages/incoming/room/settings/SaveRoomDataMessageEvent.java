@@ -14,6 +14,7 @@ import com.cometproject.server.game.rooms.types.RoomData;
 import com.cometproject.server.game.rooms.types.RoomWriter;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.notification.AdvancedAlertMessageComposer;
+import com.cometproject.server.network.messages.outgoing.notification.SimpleAlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.settings.RoomInfoUpdatedMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.settings.RoomVisualizationSettingsMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.settings.SettingsUpdatedMessageComposer;
@@ -104,7 +105,7 @@ public class SaveRoomDataMessageEvent implements Event {
             return;
         }
 
-        if (state < 0 || state > 3) {
+        if (state < 0 || state > 4) {
             return;
         }
 
@@ -124,6 +125,21 @@ public class SaveRoomDataMessageEvent implements Event {
 
         if (tags.length > 2) {
             return;
+        }
+
+
+        if(chatDistance < 0){
+            return;
+        }
+
+        if(chatDistance != room.getData().getChatDistance()){
+            if(chatDistance == 0){
+                room.setGameRoom(false);
+            }
+            else if(chatDistance > 0) {
+                room.setGameRoom(true);
+            }
+            client.getPlayer().getSession().send(new SimpleAlertMessageComposer(Locale.getOrDefault("room.idletimer.change", "Idle timer set to %time% seconds for this room, enable this function with the Idle Toggler.").replace("%time%", chatDistance + "")));
         }
 
         String filteredName = name;

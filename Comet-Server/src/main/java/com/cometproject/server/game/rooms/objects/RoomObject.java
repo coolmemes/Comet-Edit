@@ -1,8 +1,6 @@
 package com.cometproject.server.game.rooms.objects;
 
 import com.cometproject.api.game.rooms.objects.IRoomObject;
-import com.cometproject.server.game.bots.BotType;
-import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.objects.misc.Positionable;
@@ -10,7 +8,6 @@ import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.game.rooms.types.mapping.RoomTile;
 import com.cometproject.server.utilities.comporators.PositionComparator;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -68,10 +65,6 @@ public abstract class RoomObject implements IRoomObject, Positionable {
         return this.position.getX() == this.getRoom().getModel().getDoorX() && this.position.getY() == this.getRoom().getModel().getDoorY();
     }
 
-    /**
-     * Gets the closest player entity
-     * @return The closest player entity | null if one couldn't be found
-     */
     public PlayerEntity nearestPlayerEntity() {
         PositionComparator positionComporator = new PositionComparator(this);
 
@@ -80,56 +73,12 @@ public abstract class RoomObject implements IRoomObject, Positionable {
         Collections.sort(nearestEntities, positionComporator);
 
         for (PlayerEntity playerEntity : nearestEntities) {
-            if (playerEntity.getTile().isReachable(this)) {
-                return playerEntity;
-            }
+//            if (playerEntity.getTile().isReachable(this)) {
+            return playerEntity;
+//            }
         }
 
         return null;
-    }
-
-    /**
-     * Gets the closest bot entity
-     * @param type The type of bot we want to find
-     * @return Closest bot entity |
-     */
-    public BotEntity nearestBotEntity(BotType type) {
-        PositionComparator positionComparator = new PositionComparator(this);
-
-        List<BotEntity> bots = new ArrayList<>();
-        List<BotEntity> nearestEntities = this.getRoom().getEntities().getBotEntities();
-
-        if(type == null) {
-            bots.addAll(nearestEntities);
-        } else {
-            for (BotEntity botEntity : nearestEntities) {
-                if (botEntity.getData().getBotType() == type) {
-                    bots.add(botEntity);
-                }
-            }
-        }
-
-        Collections.sort(bots, positionComparator);
-
-        for(BotEntity botEntity : bots) {
-            if(this.getPosition().distanceTo(botEntity) < 4) {
-                return botEntity;
-            }
-        }
-
-        if(bots.size() >= 1) {
-            return bots.get(0); // no bots found, find the closest one.
-        }
-
-        return null;
-    }
-
-    /**
-     * Gets the closest bot entity
-     * @return The closest bot entity
-     */
-    public BotEntity nearestBotEntity() {
-        return nearestBotEntity(null);
     }
 
     /**

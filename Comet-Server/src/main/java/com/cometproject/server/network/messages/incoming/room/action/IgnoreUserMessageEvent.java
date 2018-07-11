@@ -1,6 +1,5 @@
 package com.cometproject.server.network.messages.incoming.room.action;
 
-import com.cometproject.server.game.permissions.types.Rank;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntityType;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.network.messages.incoming.Event;
@@ -25,13 +24,7 @@ public class IgnoreUserMessageEvent implements Event {
         PlayerEntity playerEntity = (PlayerEntity) client.getPlayer().getEntity().getRoom().getEntities().getEntityByName(username, RoomEntityType.PLAYER);
 
         if (playerEntity != null) {
-            final Rank rank = playerEntity.getPlayer().getPermissions().getRank();
-
-            if (rank.modTool()) {
-                return;
-            }
-
-            if(!rank.roomIgnorable()) {
+            if (playerEntity.getPlayer().getPermissions().getRank().modTool() || !playerEntity.getPlayer().getPermissions().getRank().roomIgnorable()) {
                 return;
             }
 

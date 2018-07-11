@@ -4,7 +4,6 @@ import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.effects.PlayerEffect;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.outgoing.room.avatar.WhisperMessageComposer;
 
@@ -24,40 +23,54 @@ public class WiredActionKickUser extends WiredActionShowMessage {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionKickUser(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionKickUser(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
         this.isWhisperBubble = true;
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
-        if(event.entity != null && event.type == 1) {
-            event.entity.leaveRoom(false, true, true);
-            return;
+    public boolean requiresPlayer() {
+        return true;
+    }
+
+    @Override
+    public int getInterface() {
+        return 7;
+    }
+
+    @Override
+    public boolean evaluate(RoomEntity entity, Object data) {
+        if (!(entity instanceof PlayerEntity)) {
+            return false;
         }
 
-        if (!(event.entity instanceof PlayerEntity)) {
-            return;
-        }
-
-        PlayerEntity playerEntity = (PlayerEntity) event.entity;
+        PlayerEntity playerEntity = (PlayerEntity) entity;
 
         String kickException = "";
 
         if (this.getRoom().getData().getOwnerId() == playerEntity.getPlayerId()) {
             kickException = "Room owner";
+        } else if(playerEntity.getPlayer().getPermissions().getRank().modTool()) {
+            kickException = "Staff";
         }
 
         if (kickException.isEmpty()) {
-            super.onEventComplete(event);
+            if (super.evaluate(entity, data)) {
+                this.entity = entity;
 
-            event.entity.applyEffect(new PlayerEffect(4, 5));
-            event.type = 1;
-
-            event.setTotalTicks(RoomItemFactory.getProcessTime(0.9));
-            this.queueEvent(event);
+                this.entity.applyEffect(new PlayerEffect(4, 5));
+                this.setTicks(RoomItemFactory.getProcessTime(0.9));
+            }
         } else {
-            playerEntity.getPlayer().getSession().send(new WhisperMessageComposer(playerEntity.getId(), "Wired kick exception: " + kickException));
+            playerEntity.getPlayer().getSession().send(new WhisperMessageComposer(entity.getId(), "Wired kick exception: " + kickException, 0));
+        }
+
+        return true;
+    }
+
+    public void onTickComplete() {
+        if (this.entity != null) {
+            this.entity.leaveRoom(false, true, true);
         }
     }
 }

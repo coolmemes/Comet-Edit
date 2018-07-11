@@ -12,6 +12,7 @@ public class NotificationMessageComposer extends MessageComposer {
     private static final String MESSAGE_KEY = "message";
     private static final String DISPLAY_KEY = "display";
     private static final String BUBBLE_DISPLAY = "BUBBLE";
+    private static final String LINK_URL = "linkUrl";
 
     private final Map<String, String> parameters;
     private final String type;
@@ -25,6 +26,14 @@ public class NotificationMessageComposer extends MessageComposer {
         this(type, new HashMap<String, String>() {{
             put(DISPLAY_KEY, BUBBLE_DISPLAY);
             put(MESSAGE_KEY, message);
+        }});
+    }
+
+    public NotificationMessageComposer(final String type, final String message, final String url) {
+        this(type, new HashMap<String, String>() {{
+            put(DISPLAY_KEY, BUBBLE_DISPLAY);
+            put(MESSAGE_KEY, message);
+            put(LINK_URL, url);
         }});
     }
 

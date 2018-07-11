@@ -35,8 +35,7 @@ public class GroupForumThreadDao {
                                 resultSet.getString("title"), resultSet.getString("message"),
                                 resultSet.getInt("author_id"), resultSet.getInt("author_timestamp"),
                                 resultSet.getInt("state"), resultSet.getString("locked").equals("1"),
-                                resultSet.getString("pinned").equals("1"), resultSet.getInt("moderator_id"),
-                                resultSet.getString("moderator_username"));
+                                resultSet.getString("pinned").equals("1"));
 
                         threads.put(forumThread.getId(), forumThread);
                         break;
@@ -51,8 +50,7 @@ public class GroupForumThreadDao {
 
                         final ForumThreadReply threadReply = new ForumThreadReply(msgId, -1,
                                 resultSet.getString("message"), threadId, resultSet.getInt("author_id"),
-                                resultSet.getInt("author_timestamp"), resultSet.getInt("state"),
-                                resultSet.getInt("moderator_id"), resultSet.getString("moderator_username"));
+                                resultSet.getInt("author_timestamp"), resultSet.getInt("state"));
 
                         threads.get(threadReply.getThreadId()).addReply(threadReply);
 
@@ -94,7 +92,7 @@ public class GroupForumThreadDao {
             resultSet = preparedStatement.getGeneratedKeys();
 
             while (resultSet.next()) {
-                return new ForumThread(resultSet.getInt(1), title, message, authorId, time, 1, false, false, 0, "");
+                return new ForumThread(resultSet.getInt(1), title, message, authorId, time, 1, false, false);
             }
         } catch (SQLException e) {
             SqlHelper.handleSqlException(e);
@@ -131,7 +129,7 @@ public class GroupForumThreadDao {
             resultSet = preparedStatement.getGeneratedKeys();
 
             while (resultSet.next()) {
-                return new ForumThreadReply(resultSet.getInt(1), -1, message, threadId, authorId, time, 1, 0, "");
+                return new ForumThreadReply(resultSet.getInt(1), -1, message, threadId, authorId, time, 1);
             }
         } catch (SQLException e) {
             SqlHelper.handleSqlException(e);
@@ -142,6 +140,26 @@ public class GroupForumThreadDao {
         }
 
         return null;
+    }
+
+    public static void saveMessageState(int messageId, int state) {
+        Connection sqlConnection = null;
+        PreparedStatement preparedStatement = null;
+        try {
+            sqlConnection = SqlHelper.getConnection();
+
+            preparedStatement = SqlHelper.prepare("UPDATE group_forum_messages SET state = ? WHERE id = ?", sqlConnection);
+
+            preparedStatement.setInt(1, state);
+            preparedStatement.setInt(2, messageId);
+
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            SqlHelper.handleSqlException(e);
+        } finally {
+            SqlHelper.closeSilently(preparedStatement);
+            SqlHelper.closeSilently(sqlConnection);
+        }
     }
 
     public static void saveMessageState(int messageId, int state, int playerId, String username) {
@@ -166,18 +184,16 @@ public class GroupForumThreadDao {
         }
     }
 
-    public static void saveMessageLockState(int messageId, boolean isLocked, int playerId, String username) {
+    public static void saveMessageLockState(int messageId, boolean isLocked) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("UPDATE group_forum_messages SET locked = ?, moderator_id = ?, moderator_username = ? WHERE id = ?", sqlConnection);
+            preparedStatement = SqlHelper.prepare("UPDATE group_forum_messages SET locked = ? WHERE id = ?", sqlConnection);
 
             preparedStatement.setString(1, isLocked ? "1" : "0");
-            preparedStatement.setInt(2, playerId);
-            preparedStatement.setString(3, username);
-            preparedStatement.setInt(4, messageId);
+            preparedStatement.setInt(2, messageId);
 
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
@@ -206,31 +222,5 @@ public class GroupForumThreadDao {
             SqlHelper.closeSilently(preparedStatement);
             SqlHelper.closeSilently(sqlConnection);
         }
-    }
-
-    public static int getPlayerMessageCount(int playerId) {
-        Connection sqlConnection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-
-        try {
-            sqlConnection = SqlHelper.getConnection();
-
-            preparedStatement = SqlHelper.prepare("SELECT COUNT(0) as messageCount FROM group_forum_messages WHERE author_id = ?", sqlConnection);
-            preparedStatement.setInt(1, playerId);
-
-            resultSet = preparedStatement.executeQuery();
-
-            while(resultSet.next()) {
-                return resultSet.getInt("messageCount");
-            }
-        } catch (SQLException e) {
-            SqlHelper.handleSqlException(e);
-        } finally {
-            SqlHelper.closeSilently(preparedStatement);
-            SqlHelper.closeSilently(sqlConnection);
-        }
-
-        return 0;
     }
 }

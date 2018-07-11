@@ -14,16 +14,19 @@ public class TimeSpan {
 
         StringBuffer text = new StringBuffer("");
         if (ms > DAY) {
-            text.append(ms / DAY).append(" d ");
+            text.append(ms / DAY).append(" days ");
             ms %= DAY;
-        } else if (ms > HOUR) {
-            text.append(ms / HOUR).append(" h ");
+        }
+        if (ms > HOUR) {
+            text.append(ms / HOUR).append(" hours ");
             ms %= HOUR;
-        } else if (ms > MINUTE) {
-            text.append(ms / MINUTE).append(" min ");
+        }
+        if (ms > MINUTE) {
+            text.append(ms / MINUTE).append(" minutes ");
             ms %= MINUTE;
-        } else if (ms > SECOND) {
-            text.append(ms / SECOND).append(" sec ");
+        }
+        if (ms > SECOND) {
+            text.append(ms / SECOND).append(" seconds ");
             ms %= SECOND;
         }
 

@@ -2,7 +2,6 @@ package com.cometproject.server.network.sessions;
 
 import com.cometproject.api.networking.messages.IMessageComposer;
 import com.cometproject.api.networking.sessions.BaseSession;
-import com.cometproject.server.boot.Comet;
 import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.game.moderation.ModerationManager;
 import com.cometproject.server.game.players.PlayerManager;
@@ -33,10 +32,8 @@ public class Session implements BaseSession {
     private final UUID uuid = UUID.randomUUID();
 
     private Player player;
-    private boolean disconnectCalled = false;
 
     private DiffieHellman diffieHellman;
-    private long lastPing = Comet.getTime();
 
     public Session(ChannelHandlerContext channel) {
         this.channel = channel;
@@ -58,43 +55,30 @@ public class Session implements BaseSession {
 
         PlayerManager.getInstance().put(player.getId(), channelId, username, this.getIpAddress());
 
-        if (player.getPermissions().getRank().modTool()) {
+        if(player.getPermissions().getRank().modTool()) {
             ModerationManager.getInstance().addModerator(player.getSession());
         }
     }
 
     public void onDisconnect() {
-        if (this.disconnectCalled) {
-            return;
-        }
+        if (!isClone && player != null && player.getData() != null)
+            PlayerManager.getInstance().remove(player.getId(), player.getData().getUsername(), this.channel.attr(SessionManager.CHANNEL_ID_ATTR).get(), this.getIpAddress());
 
-        this.disconnectCalled = true;
+        this.eventHandler.dispose();
 
-        PlayerManager.getInstance().getPlayerLoadExecutionService().submit(() -> {
-            if (player != null && player.getData() != null)
-                PlayerManager.getInstance().remove(player.getId(), player.getData().getUsername(), this.channel.attr(SessionManager.CHANNEL_ID_ATTR).get(), this.getIpAddress());
-
-            this.eventHandler.dispose();
-
-            if (this.player != null) {
-                if (this.getPlayer().getPermissions().getRank().modTool()) {
-                    ModerationManager.getInstance().removeModerator(this);
-                }
-
-                try {
-                    this.getPlayer().dispose();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        if (this.player != null) {
+            if(this.getPlayer().getPermissions().getRank().modTool()) {
+                ModerationManager.getInstance().removeModerator(this);
             }
 
-            this.setPlayer(null);
-        });
+            this.getPlayer().dispose();
+        }
+
+        this.setPlayer(null);
     }
 
-    public void disconnect() {
-        this.onDisconnect();
-
+    public void disconnect(boolean isClone) {
+        this.isClone = isClone;
         this.getChannel().disconnect();
     }
 
@@ -104,12 +88,16 @@ public class Session implements BaseSession {
         if (!CometSettings.useDatabaseIp) {
             return ((InetSocketAddress) this.getChannel().channel().remoteAddress()).getAddress().getHostAddress();
         } else {
-            if (this.getPlayer() != null) {
+            if(this.getPlayer() != null) {
                 ipAddress = PlayerDao.getIpAddress(this.getPlayer().getId());
             }
         }
 
         return ipAddress;
+    }
+
+    public void disconnect() {
+        this.disconnect(false);
     }
 
     public void disconnect(String reason) {
@@ -178,18 +166,10 @@ public class Session implements BaseSession {
     }
 
     public DiffieHellman getDiffieHellman() {
-        if (this.diffieHellman == null) {
+        if(this.diffieHellman == null) {
             this.diffieHellman = new DiffieHellman();
         }
 
         return diffieHellman;
-    }
-
-    public void setLastPing(long lastPing) {
-        this.lastPing = lastPing;
-    }
-
-    public long getLastPing() {
-        return lastPing;
     }
 }

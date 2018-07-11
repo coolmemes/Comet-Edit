@@ -42,6 +42,36 @@ public class RelationshipDao {
         return data;
     }
 
+    public static RelationshipLevel getRelationshipLevelByPlayerId(int playerId, int partnerId) {
+        Connection sqlConnection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+
+        RelationshipLevel level = null;
+
+        try {
+            sqlConnection = SqlHelper.getConnection();
+
+            preparedStatement = SqlHelper.prepare("SELECT `level` FROM player_relationships WHERE player_id = ? AND partner = ?", sqlConnection);
+            preparedStatement.setInt(1, playerId);
+            preparedStatement.setInt(2, partnerId);
+
+            resultSet = preparedStatement.executeQuery();
+
+            while (resultSet.next()) {
+                level.equals(resultSet.getString("level").toUpperCase());
+            }
+        } catch (SQLException e) {
+            SqlHelper.handleSqlException(e);
+        } finally {
+            SqlHelper.closeSilently(resultSet);
+            SqlHelper.closeSilently(preparedStatement);
+            SqlHelper.closeSilently(sqlConnection);
+        }
+
+        return level;
+    }
+
     public static void deleteRelationship(int playerId, int partner) {
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;

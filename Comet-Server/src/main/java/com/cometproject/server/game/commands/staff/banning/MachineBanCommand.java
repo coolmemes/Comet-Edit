@@ -13,7 +13,6 @@ public class MachineBanCommand extends ChatCommand {
     @Override
     public void execute(Session client, String[] params) {
         if (params.length < 2) {
-            sendNotif(Locale.getOrDefault("command.params.length", "Oops! You did something wrong!"), client);
             return;
         }
 
@@ -23,12 +22,11 @@ public class MachineBanCommand extends ChatCommand {
         Session user = NetworkManager.getInstance().getSessions().getByPlayerUsername(username);
 
         if (user == null) {
-            sendNotif(Locale.getOrDefault("command.user.offline", "This user is offline!"), client);
+            // TODO: Use the "player_access" table to allow you to machine ban a user that's not online
             return;
         }
 
         if (user == client || !user.getPlayer().getPermissions().getRank().bannable()) {
-            sendNotif(Locale.getOrDefault("command.user.notbannable", "You're not able to ban this user!"), client);
             return;
         }
 
@@ -51,19 +49,9 @@ public class MachineBanCommand extends ChatCommand {
     public String getPermission() {
         return "machineban_command";
     }
-    
-    @Override
-    public String getParameter() {
-        return Locale.getOrDefault("command.parameter.ban", "%username% %time% %reason%");
-    }
 
     @Override
     public String getDescription() {
         return Locale.get("command.machineban.description");
-    }
-
-    @Override
-    public boolean bypassFilter() {
-        return true;
     }
 }

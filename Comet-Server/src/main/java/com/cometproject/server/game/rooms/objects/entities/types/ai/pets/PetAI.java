@@ -12,7 +12,6 @@ import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.ai.AbstractBotAI;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.pet.PetToyFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.WiredUtil;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.mapping.RoomTile;
 import com.cometproject.server.game.rooms.types.misc.ChatEmotion;
@@ -238,16 +237,15 @@ public class PetAI extends AbstractBotAI {
     }
 
     public void play() {
-        // Find a random toy item
-        final PetToyFloorItem floorItem = WiredUtil.getRandomElement(this.getPetEntity().getRoom().getItems().getByClass(PetToyFloorItem.class));
-
-        if(floorItem != null) {
+        // Find item
+        for (RoomItemFloor floorItem : this.getPetEntity().getRoom().getItems().getByClass(PetToyFloorItem.class)) {
             this.toyItem = (PetToyFloorItem) floorItem;
 
             // 1 min play timer.
             this.playTimer = RandomInteger.getRandom(10, 50);
 
             this.moveTo(floorItem.getPosition());
+            return;
         }
     }
 

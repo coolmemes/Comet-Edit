@@ -3,7 +3,6 @@ package com.cometproject.server.storage.queries.polls;
 import com.cometproject.server.game.polls.types.Poll;
 import com.cometproject.server.game.polls.types.PollQuestionType;
 import com.cometproject.server.game.polls.types.questions.MultipleChoiceQuestion;
-import com.cometproject.server.game.polls.types.questions.SingleChoiceQuestion;
 import com.cometproject.server.game.polls.types.questions.WordedPollQuestion;
 import com.cometproject.server.storage.SqlHelper;
 import com.google.common.collect.Maps;
@@ -25,42 +24,28 @@ public class PollDao {
         try {
             sqlConnection = SqlHelper.getConnection();
 
-            preparedStatement = SqlHelper.prepare("SELECT * FROM polls;", sqlConnection);
-
+            preparedStatement = SqlHelper.prepare("SELECT pQ.id AS id, p.id AS pollId, p.title AS pollTitle, p.thanks_message AS pollThanksMessage, p.room_id AS pollRoomId," +
+                    " p.badge_reward AS badgeReward, pQ.question_type AS questionType, pQ.question AS question, pQ.options AS options FROM polls_questions pQ LEFT JOIN polls p ON" +
+                    "(SELECT id FROM polls WHERE id = pQ.poll_id);", sqlConnection);
             resultSet = preparedStatement.executeQuery();
 
             while (resultSet.next()) {
-                int pollId = resultSet.getInt("id");
-                final String title = resultSet.getString("title");
-                final int roomId = resultSet.getInt("room_id");
-                final String thanksMessage = resultSet.getString("thanks_message");
+                final int pollId = resultSet.getInt("pollId");
+                Poll poll;
 
-                final String rewardBadge = resultSet.getString("reward_badge");
-                final int rewardCredits = resultSet.getInt("reward_credits");
-                final int rewardActivityPoints = resultSet.getInt("reward_activity_points");
-                final int rewardDiamonds = resultSet.getInt("reward_vip_points");
-                final int rewardAchievementPoints = resultSet.getInt("reward_achievement_points");
+                if(!data.containsKey(pollId)) {
+                    final String title = resultSet.getString("pollTitle");
+                    final int roomId = resultSet.getInt("pollRoomId");
+                    final String thanksMessage = resultSet.getString("pollThanksMessage");
+                    final String badgeReward = resultSet.getString("badgeReward");
 
-                data.put(pollId, new Poll(pollId, roomId, title, thanksMessage, rewardBadge, rewardCredits, rewardDiamonds, rewardActivityPoints, rewardAchievementPoints));
-            }
-
-            // close the stuff cos we gonna create new ones
-            SqlHelper.closeSilently(resultSet);
-            SqlHelper.closeSilently(preparedStatement);
-
-            preparedStatement = SqlHelper.prepare("SELECT * FROM polls_questions", sqlConnection);
-            resultSet = preparedStatement.executeQuery();
-
-            while (resultSet.next()) {
-                final int pollId = resultSet.getInt("poll_id");
-
-                if (!data.containsKey(pollId)) {
-                    continue;
+                    poll = new Poll(pollId, roomId, title, thanksMessage, badgeReward);
+                    data.put(pollId, poll);
+                } else {
+                    poll = data.get(pollId);
                 }
 
-                final Poll poll = data.get(pollId);
-
-                PollQuestionType questionType = PollQuestionType.valueOf(resultSet.getString("question_type"));
+                PollQuestionType questionType = PollQuestionType.valueOf(resultSet.getString("questionType"));
 
                 switch (questionType) {
                     default:
@@ -71,12 +56,7 @@ public class PollDao {
                     case MULTIPLE_CHOICE:
                         poll.addQuestion(resultSet.getInt("id"), new MultipleChoiceQuestion(resultSet.getString("question"), resultSet.getString("options")));
                         break;
-
-                    case SINGLE_CHOICE:
-                        poll.addQuestion(resultSet.getInt("id"), new SingleChoiceQuestion(resultSet.getString("question"), resultSet.getString("options")));
-                        break;
                 }
-
             }
         } catch (SQLException e) {
             SqlHelper.handleSqlException(e);
@@ -113,65 +93,35 @@ public class PollDao {
     }
 
     public static boolean hasAnswered(int playerId, int pollId, int questionId) {
-        Connection sqlConnection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
+            Connection sqlConnection = null;
+            PreparedStatement preparedStatement = null;
+            ResultSet resultSet = null;
 
-        try {
-            sqlConnection = SqlHelper.getConnection();
+            try {
+                sqlConnection = SqlHelper.getConnection();
 
-            String query = "SELECT NULL FROM polls_answers WHERE question_id = ? AND poll_id = ? AND player_id = ?;";
-            preparedStatement = SqlHelper.prepare(query, sqlConnection);
+                String query = "SELECT NULL FROM polls_answers WHERE question_id = ? AND poll_id = ? AND player_id = ?;";
+                preparedStatement = SqlHelper.prepare(query, sqlConnection);
 
-            preparedStatement.setInt(1, questionId);
-            preparedStatement.setInt(2, pollId);
-            preparedStatement.setInt(3, playerId);
+                preparedStatement.setInt(1, questionId);
+                preparedStatement.setInt(2, pollId);
+                preparedStatement.setInt(3, playerId);
 
-            resultSet = preparedStatement.executeQuery();
+                resultSet = preparedStatement.executeQuery();
 
-            while (resultSet.next()) {
-                return true;
+                while (resultSet.next()) {
+                    return true;
+                }
+
+            } catch (SQLException e) {
+                SqlHelper.handleSqlException(e);
+            } finally {
+                SqlHelper.closeSilently(resultSet);
+                SqlHelper.closeSilently(preparedStatement);
+                SqlHelper.closeSilently(sqlConnection);
             }
 
-        } catch (SQLException e) {
-            SqlHelper.handleSqlException(e);
-        } finally {
-            SqlHelper.closeSilently(resultSet);
-            SqlHelper.closeSilently(preparedStatement);
-            SqlHelper.closeSilently(sqlConnection);
-        }
-
-        return false;
+            return false;
     }
 
-    public static boolean hasAnswered(int playerId, int pollId) {
-        Connection sqlConnection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-
-        try {
-            sqlConnection = SqlHelper.getConnection();
-
-            String query = "SELECT NULL FROM polls_answers WHERE poll_id = ? AND player_id = ?;";
-            preparedStatement = SqlHelper.prepare(query, sqlConnection);
-
-            preparedStatement.setInt(1, pollId);
-            preparedStatement.setInt(2, playerId);
-
-            resultSet = preparedStatement.executeQuery();
-
-            while (resultSet.next()) {
-                return true;
-            }
-
-        } catch (SQLException e) {
-            SqlHelper.handleSqlException(e);
-        } finally {
-            SqlHelper.closeSilently(resultSet);
-            SqlHelper.closeSilently(preparedStatement);
-            SqlHelper.closeSilently(sqlConnection);
-        }
-
-        return false;
-    }
 }

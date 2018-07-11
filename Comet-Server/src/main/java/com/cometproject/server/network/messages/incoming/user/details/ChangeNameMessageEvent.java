@@ -1,6 +1,9 @@
 package com.cometproject.server.network.messages.incoming.user.details;
 
+
+import com.cometproject.api.game.rooms.IRoomData;
 import com.cometproject.server.config.Locale;
+import com.cometproject.server.game.achievements.types.AchievementType;
 import com.cometproject.server.game.players.PlayerManager;
 import com.cometproject.server.game.players.types.Player;
 import com.cometproject.server.game.rooms.RoomManager;
@@ -9,8 +12,8 @@ import com.cometproject.server.game.rooms.types.RoomData;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.notification.AdvancedAlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.engine.RoomForwardMessageComposer;
-import com.cometproject.server.network.messages.outgoing.room.engine.UserNameChangeMessageComposer;
-import com.cometproject.server.network.messages.outgoing.user.details.UpdateUsernameMessageComposer;
+import com.cometproject.server.network.messages.outgoing.user.details.UserNameChangeMessageComposer;
+import com.cometproject.server.network.messages.outgoing.user.details.UsernameUpdateMessageComposer;
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.storage.queries.player.PlayerDao;
@@ -27,16 +30,16 @@ public class ChangeNameMessageEvent implements Event {
 
         boolean inUse = false;
 
-        if (client == null || client.getPlayer() == null || client.getPlayer().getData() == null || !client.getPlayer().getData().getChangingName()) {
+        if (client == null || client.getPlayer() == null || client.getPlayer().getData() == null) {
             return;
         }
 
         if (newName.equals(oldName)) {
             if (client.getPlayer().getData().getFlaggingUser()) {
-                client.send(new AdvancedAlertMessageComposer(Locale.getOrDefault("command.flaguser.alreadyexist.title", "Grrrr!"), Locale.getOrDefault("command.flaguser.alreadyexist","Your name is inappropriate! That means that you're not allowed to choose your own inappropriate name again.")));
+                client.send(new AdvancedAlertMessageComposer(Locale.getOrDefault("command.flaguser.alreadyexist.title", "Grrrr!"), Locale.getOrDefault("command.flaguser.alreadyexist", "Your name is inappropriate! That means that you're not allowed to choose your own inappropriate name again.")));
                 return;
             } else {
-                client.send(new UpdateUsernameMessageComposer(newName));
+                client.send(new UsernameUpdateMessageComposer(newName));
                 client.getPlayer().getData().setChangingName(false);
                 return;
             }
@@ -44,7 +47,7 @@ public class ChangeNameMessageEvent implements Event {
 
         if (PlayerManager.getInstance().getPlayerIdByUsername(newName) != -1 || PlayerDao.getUsernameAlreadyExist(newName) != 0) {
             inUse = true;
-            client.send(new AdvancedAlertMessageComposer(Locale.getOrDefault("command.flagme.alreadyexist.title", "Woops!"), Locale.getOrDefault("command.flagme.alreadyexist","This name already exists! Try another name")));
+            client.send(new AdvancedAlertMessageComposer(Locale.getOrDefault("command.flagme.alreadyexist.title", "Woops!"), Locale.getOrDefault("command.flagme.alreadyexist", "This name already exists! Try another name")));
         }
 
         char[] letters = newName.toLowerCase().toCharArray();
@@ -68,16 +71,16 @@ public class ChangeNameMessageEvent implements Event {
 
         client.getPlayer().getData().setFlaggingUser(false);
         client.getPlayer().getData().setChangingName(false);
-        
+
         if (client.getPlayer().getEntity() != null) {
             client.getPlayer().getEntity().kick();
             client.send(new UserNameChangeMessageComposer(client.getPlayer().getEntity().getRoom().getId(), client.getPlayer().getData().getId(), newName));
         } else {
             client.send(new UserNameChangeMessageComposer(-1, client.getPlayer().getData().getId(), newName));
         }
-        
-        client.getPlayer().getMessenger().setInitialised(true);
-        client.send(new UpdateUsernameMessageComposer(newName));
+
+        //client.getPlayer().getMessenger().setInitialised(true);
+        client.send(new UsernameUpdateMessageComposer(newName));
 
         PlayerDao.updatePlayersUsername(newName, client.getPlayer().getId());
         PlayerDao.updateRoomsUsername(newName, client.getPlayer().getId());
@@ -88,7 +91,7 @@ public class ChangeNameMessageEvent implements Event {
         PlayerManager.getInstance().updateUsernameCache(oldName, newName);
 
         for (Map.Entry<Integer, RoomData> roomEntry : rooms.entrySet()) {
-            RoomData roomData = RoomManager.getInstance().getRoomData(roomEntry.getValue().getId());
+            IRoomData roomData = RoomManager.getInstance().getRoomData(roomEntry.getValue().getId());
             roomData.setOwner(newName);
         }
 
@@ -96,5 +99,7 @@ public class ChangeNameMessageEvent implements Event {
         if (client.getPlayer().getEntity() != null) {
             client.getPlayer().getSession().send(new RoomForwardMessageComposer(client.getPlayer().getEntity().getRoom().getId()));
         }
+
+        client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_100, 1);
     }
 }

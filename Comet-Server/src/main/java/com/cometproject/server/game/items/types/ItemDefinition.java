@@ -11,7 +11,6 @@ public class ItemDefinition implements FurnitureDefinition {
     private final String publicName;
     private final String itemName;
     private final String type;
-    private final ItemType itemType;
     private final int width;
     private final int length;
     private final double height;
@@ -50,16 +49,15 @@ public class ItemDefinition implements FurnitureDefinition {
         this.canStack = data.getString("can_stack").equals("1");
         this.canSit = data.getString("can_sit").equals("1");
         this.canWalk = data.getString("is_walkable").equals("1");
+        this.canRecycle = data.getString("allow_recycle").equals("1");
         this.canTrade = data.getString("allow_trade").equals("1");
         this.canInventoryStack = data.getString("allow_inventory_stack").equals("1");
 
         this.offerId = data.getInt("flat_id");
-
-        this.canRecycle = false;
-        this.canMarket = false;
+        this.canMarket = data.getString("allow_marketplace_sell").equals("1");
         this.canGift = data.getString("allow_gift").equals("1");
 
-        this.effectId = data.getInt("effect_id");
+        this.effectId = data.getInt("effectid");
         this.interaction = data.getString("interaction_type");
         this.interactionCycleCount = data.getInt("interaction_modes_count");
         this.vendingIds = data.getString("vending_ids").isEmpty() ? new String[0] : data.getString("vending_ids").split(",");
@@ -90,8 +88,6 @@ public class ItemDefinition implements FurnitureDefinition {
         } else {
             this.height = height;
         }
-
-        this.itemType = ItemType.forString(this.type);
     }
 
     public boolean isAdFurni() {
@@ -124,10 +120,6 @@ public class ItemDefinition implements FurnitureDefinition {
 
     public String getType() {
         return this.type;
-    }
-
-    public ItemType getItemType() {
-        return this.itemType;
     }
 
     public int getWidth() {

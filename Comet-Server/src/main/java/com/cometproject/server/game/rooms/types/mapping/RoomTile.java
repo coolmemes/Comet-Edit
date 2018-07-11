@@ -8,11 +8,13 @@ import com.cometproject.server.game.rooms.objects.entities.pathfinding.types.Ent
 import com.cometproject.server.game.rooms.objects.entities.pathfinding.types.ItemPathfinder;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.*;
+import com.cometproject.server.game.rooms.objects.items.types.floor.games.freeze.FreezeBlockFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.groups.GroupGateFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.snowboarding.SnowboardJumpFloorItem;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.tiles.RoomTileState;
 import com.cometproject.server.utilities.collections.ConcurrentHashSet;
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +62,25 @@ public class RoomTile {
         this.items = new ArrayList<>(); // maybe change this in the future..
 
         this.reload();
+    }
+
+    public List<RoomTile> getAdjacentTiles(Position from) {
+        final List<RoomTile> roomTiles = Lists.newArrayList();
+
+            for(int rotation : Position.COLLIDE_TILES) {
+            final RoomTile tile = this.mappingInstance.getTile(this.getPosition().squareInFront(rotation));
+
+            roomTiles.add(tile);
+        }
+
+        roomTiles.sort((left, right) -> {
+            final double distanceFromLeft = left.getPosition().distanceTo(from);
+            final double distanceFromRight = right.getPosition().distanceTo(from);
+
+            return distanceFromLeft > distanceFromRight ? 1 : distanceFromLeft == distanceFromRight ? 0 : -1;
+        });
+
+        return roomTiles;
     }
 
     public void reload() {
@@ -121,7 +142,7 @@ public class RoomTile {
             if (item.getDefinition() == null)
                 continue;
 
-            if(item instanceof GateFloorItem || item instanceof GroupGateFloorItem) {
+            if(item instanceof GateFloorItem || item instanceof GroupGateFloorItem || item instanceof SubscriptionGateFloorItem) {
                 this.hasGate = true;
             }
 
@@ -169,6 +190,15 @@ public class RoomTile {
                 case "wf_pyramid":
                     movementNode = item.getExtraData().equals("1") ? RoomEntityMovementNode.OPEN : RoomEntityMovementNode.CLOSED;
                     break;
+
+                case "football_goal":
+                    movementNode = RoomEntityMovementNode.OPEN;
+                    break;
+
+                case "freeze_block":
+                    movementNode = ((FreezeBlockFloorItem) item).isDestroyed() ? RoomEntityMovementNode.OPEN : RoomEntityMovementNode.CLOSED;
+                    break;
+
             }
 
             if (item instanceof SnowboardJumpFloorItem) {
@@ -252,8 +282,10 @@ public class RoomTile {
 
         double stackHeight;
 
-        if (this.hasMagicTile() || (topItem != null && topItem instanceof AdjustableHeightFloorItem)) {
+        if(this.hasMagicTile()) {
             stackHeight = this.stackHeight;
+        } else if(((topItem != null && topItem instanceof AdjustableHeightFloorItem) && (itemToStack != null && itemToStack.getId() != this.getTopItem()))) {
+            stackHeight = topItem.getPosition().getZ() + (topItem.getOverrideHeight() != -1d ? topItem.getOverrideHeight() : topItem.getDefinition().getHeight() );
         } else {
             stackHeight = itemToStack != null && itemToStack.getId() == this.getTopItem() ? itemToStack.getPosition().getZ() : this.originalHeight;
         }
@@ -266,6 +298,19 @@ public class RoomTile {
 
         RoomItemFloor roomItemFloor = this.mappingInstance.getRoom().getItems().getFloorItem(this.topItem);
 
+        if(roomItemFloor != null) {
+            double addon;
+
+            if(roomItemFloor instanceof AdjustableHeightFloorItem) {
+                addon = roomItemFloor.getOverrideHeight();
+            } else if(roomItemFloor instanceof SeatFloorItem) {
+                addon = ((SeatFloorItem) roomItemFloor).getSitHeight();
+            } else {
+                addon = roomItemFloor.getDefinition().getHeight();
+            }
+            height = roomItemFloor.getPosition().getZ() + addon;
+        }
+
         if (roomItemFloor != null && (roomItemFloor.getDefinition().canSit() || roomItemFloor instanceof BedFloorItem || roomItemFloor instanceof SnowboardJumpFloorItem)) {
             if (roomItemFloor instanceof SnowboardJumpFloorItem) {
                 height += 1.0;
@@ -273,11 +318,6 @@ public class RoomTile {
                 height -= roomItemFloor.getDefinition().getHeight();
             }
         }
-
-        if (this.hasAdjustableHeight && roomItemFloor instanceof SeatFloorItem) {
-            height += ((SeatFloorItem) roomItemFloor).getSitHeight();
-        }
-
         return height;
     }
 

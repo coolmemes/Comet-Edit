@@ -1,6 +1,5 @@
 package com.cometproject.server.network.messages.incoming.room.item.mannequins;
 
-import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.boutique.MannequinFloorItem;
 import com.cometproject.server.game.rooms.types.Room;
@@ -13,9 +12,7 @@ import com.cometproject.server.protocol.messages.MessageEvent;
 public class SaveMannequinFigureMessageEvent implements Event {
     @Override
     public void handle(Session client, MessageEvent msg) throws Exception {
-        int virtualId = msg.readInt();
-
-        long id = ItemManager.getInstance().getItemIdByVirtualId(virtualId);
+        int id = msg.readInt();
 
         Room room = client.getPlayer().getEntity().getRoom();
 

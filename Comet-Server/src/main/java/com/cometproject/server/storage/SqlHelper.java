@@ -1,7 +1,5 @@
 package com.cometproject.server.storage;
 
-import com.cometproject.api.messaging.performance.QueryRequest;
-import com.cometproject.server.network.NetworkManager;
 import org.apache.log4j.Logger;
 
 import java.sql.Connection;
@@ -18,14 +16,6 @@ public class SqlHelper {
     private static Logger log = Logger.getLogger(SqlHelper.class.getName());
 
     private static Map<String, AtomicInteger> queryCounters = new ConcurrentHashMap<>();
-    public static boolean queryLogEnabled = false;
-
-    public static class QueryLog {
-        public long startTime = System.currentTimeMillis();
-        public String query;
-    }
-
-    public static Map<Integer, QueryLog> queryLog = new ConcurrentHashMap<>();
 
     public static void init(StorageManager storageEngine) {
         storage = storageEngine;
@@ -62,19 +52,6 @@ public class SqlHelper {
             if (statement == null) {
                 return;
             }
-
-            if(queryLogEnabled && queryLog.containsKey(statement.hashCode())) {
-                final QueryLog log = queryLog.get(statement.hashCode());
-                final long timeTaken = (System.currentTimeMillis() - log.startTime);
-
-                if(NetworkManager.getInstance().getMessagingClient() != null) {
-                    NetworkManager.getInstance().getMessagingClient().sendMessage("com.cometproject:manager", new QueryRequest(log.query, timeTaken));
-                }
-                //System.out.println("[QUERY] " + log.query + " took " + timeTaken + "ms");
-
-                queryLog.remove(statement.hashCode());
-            }
-
             statement.close();
         } catch (SQLException e) {
             handleSqlException(e);
@@ -108,16 +85,7 @@ public class SqlHelper {
             queryCounters.get(query).incrementAndGet();
         }
 
-        final PreparedStatement statement = returnKeys ? con.prepareStatement(query, java.sql.Statement.RETURN_GENERATED_KEYS) : con.prepareStatement(query);
-
-        if(queryLogEnabled) {
-            final QueryLog log = new QueryLog();
-            log.query = query;
-
-            queryLog.put(statement.hashCode(), log);
-        }
-
-        return statement;
+        return returnKeys ? con.prepareStatement(query, java.sql.Statement.RETURN_GENERATED_KEYS) : con.prepareStatement(query);
     }
 
     public static void handleSqlException(SQLException e) {

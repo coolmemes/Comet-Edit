@@ -1,5 +1,6 @@
 package com.cometproject.server.network.messages.incoming.room.settings;
 
+import com.cometproject.server.game.achievements.types.AchievementType;
 import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.api.game.players.data.components.inventory.PlayerItem;
 import com.cometproject.server.game.quests.types.QuestType;
@@ -49,8 +50,13 @@ public class ApplyDecorationMessageEvent implements Event {
             }
 
             if (type.equals("floor")) {
+                client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_44, 1);
                 client.getPlayer().getQuests().progressQuest(QuestType.FURNI_DECORATION_FLOOR);
             } else if (type.equals("wallpaper")) {
+                client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_47, 1);
+                client.getPlayer().getQuests().progressQuest(QuestType.FURNI_DECORATION_WALL);
+            } else if (type.equals("landscape")) {
+                client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_46, 1);
                 client.getPlayer().getQuests().progressQuest(QuestType.FURNI_DECORATION_WALL);
             }
 

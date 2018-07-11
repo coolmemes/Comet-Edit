@@ -13,13 +13,9 @@ import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.items.wired.dialog.WiredTriggerMessageComposer;
 import com.cometproject.server.utilities.RandomInteger;
 import com.google.common.collect.Lists;
-import com.sun.jna.platform.unix.X11;
 import org.apache.log4j.Logger;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public abstract class WiredTriggerItem extends WiredFloorItem {
@@ -38,18 +34,13 @@ public abstract class WiredTriggerItem extends WiredFloorItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredTriggerItem(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredTriggerItem(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
     public boolean evaluate(RoomEntity entity, Object data) {
         try {
-            // if the trigger relies on an entity being provided and there wasn't one, ignore.
-            if(this.suppliesPlayer() && entity == null) {
-                return false;
-            }
-
             // create empty list for all wired actions on the current tile
             List<WiredActionItem> wiredActions = Lists.newArrayList();
 
@@ -87,23 +78,11 @@ public abstract class WiredTriggerItem extends WiredFloorItem {
                 unseenEffectItem.getSeenEffects().clear();
             }
 
-            final Map<Class<? extends WiredConditionItem>, AtomicBoolean> completedConditions = new HashMap<>();
-
             // loop through the conditions and check whether or not we can perform the action
             for (WiredConditionItem conditionItem : wiredConditions) {
                 conditionItem.flash();
 
-                if(!completedConditions.containsKey(conditionItem.getClass())) {
-                    completedConditions.put(conditionItem.getClass(), new AtomicBoolean(false));
-                }
-
-                if (conditionItem.evaluate(entity, data)) {
-                    completedConditions.get(conditionItem.getClass()).set(true);
-                }
-            }
-
-            for(AtomicBoolean conditionState: completedConditions.values()) {
-                if(!conditionState.get()) {
+                if (!conditionItem.evaluate(entity, data)) {
                     canExecute = false;
                 }
             }
@@ -171,12 +150,25 @@ public abstract class WiredTriggerItem extends WiredFloorItem {
             }
         }
 
+        actionItem.flash();
+
         return actionItem.evaluate(entity, data);
     }
 
     @Override
     public MessageComposer getDialog() {
         return new WiredTriggerMessageComposer(this);
+    }
+
+    public static <T extends RoomItemFloor> List<T> getTriggers(Room room, Class<T> clazz) {
+        final List<T> triggers = Lists.newArrayList();
+
+        for (RoomItemFloor floorItem : room.getItems().getByClass(clazz)) {
+            if (triggers.size() <= 30)
+                triggers.add((T) floorItem);
+        }
+
+        return triggers;
     }
 
     public List<WiredActionItem> getIncompatibleActions() {

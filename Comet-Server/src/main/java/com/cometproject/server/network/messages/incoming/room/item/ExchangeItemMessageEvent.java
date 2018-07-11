@@ -1,6 +1,5 @@
 package com.cometproject.server.network.messages.incoming.room.item;
 
-import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.incoming.Event;
@@ -11,9 +10,7 @@ import com.cometproject.server.network.sessions.Session;
 public class ExchangeItemMessageEvent implements Event {
     @Override
     public void handle(Session client, MessageEvent msg) {
-        int virtualId = msg.readInt();
-
-        long itemId = ItemManager.getInstance().getItemIdByVirtualId(virtualId);
+        int itemId = msg.readInt();
 
         if (client.getPlayer().getEntity() == null) {
             return;
@@ -38,6 +35,7 @@ public class ExchangeItemMessageEvent implements Event {
 
         int value;
         boolean isDiamond = false;
+        boolean isDuckets = false;
 
         if(!item.getDefinition().getItemName().startsWith("CF_") && !item.getDefinition().getItemName().startsWith("CFC_")) {
             return;
@@ -46,6 +44,9 @@ public class ExchangeItemMessageEvent implements Event {
         if (item.getDefinition().getItemName().contains("_diamond_")) {
             isDiamond = true;
             value = Integer.parseInt(item.getDefinition().getItemName().split("_diamond_")[1]);
+        } else if(item.getDefinition().getItemName().contains("CFC_")){
+            isDuckets = true;
+            value = Integer.parseInt(item.getDefinition().getItemName().split("_")[1]);
         } else {
             value = Integer.parseInt(item.getDefinition().getItemName().split("_")[1]);
         }
@@ -54,9 +55,12 @@ public class ExchangeItemMessageEvent implements Event {
 
         if (isDiamond) {
             client.getPlayer().getData().increasePoints(value);
+        } else if(isDuckets){
+            client.getPlayer().getData().increaseActivityPoints(value);
         } else {
             client.getPlayer().getData().increaseCredits(value);
         }
+
 
         client.getPlayer().sendBalance();
         client.getPlayer().getData().save();

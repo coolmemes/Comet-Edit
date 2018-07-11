@@ -73,6 +73,7 @@ public class RoomItemEventQueue {
                     case StepOff:
                         floor.onEntityStepOff(e.getEntity());
                         break;
+
                 }
             }
         }

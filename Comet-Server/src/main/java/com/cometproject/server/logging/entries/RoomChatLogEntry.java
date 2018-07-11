@@ -7,6 +7,8 @@ import com.cometproject.server.logging.LogEntryType;
 import com.cometproject.server.storage.queries.player.PlayerDao;
 import com.cometproject.server.utilities.TimeSpan;
 
+import java.text.SimpleDateFormat;
+
 
 public class RoomChatLogEntry extends AbstractLogEntry {
     private int roomId;
@@ -29,8 +31,10 @@ public class RoomChatLogEntry extends AbstractLogEntry {
     }
 
     public void compose(IComposer msg) {
-        msg.writeString(TimeSpan.millisecondsToDate((int)(Comet.getTime() - getTimestamp()) * 1000));
+        String timeStamp = new SimpleDateFormat("HH:mm").format(this.timestamp);
 
+
+        msg.writeString(timeStamp);
         msg.writeInt(this.getPlayerId());
         msg.writeString(PlayerDao.getUsernameByPlayerId(this.getPlayerId()));
         msg.writeString(this.getString());

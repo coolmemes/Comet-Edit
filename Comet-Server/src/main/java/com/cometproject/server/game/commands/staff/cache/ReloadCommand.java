@@ -5,8 +5,10 @@ import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.achievements.AchievementManager;
 import com.cometproject.server.game.catalog.CatalogManager;
+import com.cometproject.server.game.catalog.recycler.RecycleManager;
 import com.cometproject.server.game.commands.ChatCommand;
 import com.cometproject.server.game.commands.CommandManager;
+import com.cometproject.server.game.gamecenter.GameCenterManager;
 import com.cometproject.server.game.groups.GroupManager;
 import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.server.game.landing.LandingManager;
@@ -16,19 +18,16 @@ import com.cometproject.server.game.navigator.NavigatorManager;
 import com.cometproject.server.game.permissions.PermissionsManager;
 import com.cometproject.server.game.pets.PetManager;
 import com.cometproject.server.game.pets.commands.PetCommandManager;
-import com.cometproject.server.game.players.types.Player;
 import com.cometproject.server.game.polls.PollManager;
 import com.cometproject.server.game.polls.types.Poll;
 import com.cometproject.server.game.quests.QuestManager;
 import com.cometproject.server.game.rooms.RoomManager;
-import com.cometproject.server.game.rooms.types.Room;
-import com.cometproject.server.game.rooms.types.RoomReloadListener;
+import com.cometproject.server.game.utilities.validator.PlayerFigureValidator;
 import com.cometproject.server.network.NetworkManager;
 import com.cometproject.server.network.messages.outgoing.catalog.CatalogPublishMessageComposer;
 import com.cometproject.server.network.messages.outgoing.moderation.ModToolMessageComposer;
-import com.cometproject.server.network.messages.outgoing.notification.AlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.MotdNotificationMessageComposer;
-import com.cometproject.server.network.messages.outgoing.room.engine.RoomForwardMessageComposer;
+import com.cometproject.server.network.messages.outgoing.room.engine.UpdateStackMapMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.polls.InitializePollMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 
@@ -60,7 +59,12 @@ public class ReloadCommand extends ChatCommand {
                                 "- quests\n" +
                                 "- achievements\n" +
                                 "- pets\n" +
-                                "- polls"
+                                "- polls\n" +
+                                "- nuxgifts\n" +
+                                "- games\n" +
+                                "- figure\n" +
+                                "- crafting\n" +
+                                "- crackable"
                 ));
 
                 break;
@@ -70,12 +74,25 @@ public class ReloadCommand extends ChatCommand {
                 sendNotif(Locale.get("command.reload.bans"), client);
                 break;
 
+            case "crackable":
+                ItemManager.getInstance().loadCrackableRewards();
+                sendNotif(Locale.get("command.reload.crackable"), client);
+
+                break;
+
             case "catalog":
                 CatalogManager.getInstance().loadItemsAndPages();
                 CatalogManager.getInstance().loadGiftBoxes();
+                RecycleManager.getInstance().loadRecyclerMachine();
 
                 NetworkManager.getInstance().getSessions().broadcast(new CatalogPublishMessageComposer(true));
                 sendNotif(Locale.get("command.reload.catalog"), client);
+                break;
+
+            case "crafting":
+                ItemManager.getInstance().loadCraftingMachines();
+
+                sendNotif(Locale.get("command.reload.crafting"), client);
                 break;
 
             case "navigator":
@@ -90,6 +107,7 @@ public class ReloadCommand extends ChatCommand {
                 PermissionsManager.getInstance().loadRankPermissions();
                 PermissionsManager.getInstance().loadPerks();
                 PermissionsManager.getInstance().loadCommands();
+                PermissionsManager.getInstance().loadEffects();
                 PermissionsManager.getInstance().loadOverrideCommands();
 
                 sendNotif(Locale.get("command.reload.permissions"), client);
@@ -107,9 +125,26 @@ public class ReloadCommand extends ChatCommand {
                 sendNotif(Locale.get("command.reload.news"), client);
                 break;
 
+            case "nuxgifts":
+                CatalogManager.getInstance().loadNuxGifts();
+                sendNotif(Locale.get("command.reload.nuxgifts"), client);
+                break;
+
+            case "games":
+                GameCenterManager.getInstance().loadGameCenterList();
+                sendNotif(Locale.get("command.reload.games"), client);
+                break;
+
             case "items":
                 ItemManager.getInstance().loadItemDefinitions();
-
+                RoomManager.getInstance().getRoomInstances().forEach((id, roomUpdate) -> {
+                    roomUpdate.reloadItems();
+                    roomUpdate.getItems().getFloorItems().forEach((itemIds, item) -> {
+                        item.getTile().reload();
+                        roomUpdate.getEntities().broadcastMessage(new UpdateStackMapMessageComposer(item.getTile()));
+                        item.sendUpdate();
+                    });
+                });
                 sendNotif(Locale.get("command.reload.items"), client);
                 break;
 
@@ -183,22 +218,12 @@ public class ReloadCommand extends ChatCommand {
                 sendNotif(Locale.get("command.reload.polls"), client);
                 break;
 
-            case "room": {
-                final Room room = client.getPlayer().getEntity().getRoom();
+            case "figure":
+                PlayerFigureValidator.loadFigureData();
 
-                final RoomReloadListener reloadListener = new RoomReloadListener(room, (players, newRoom) -> {
-                    for (Player player : players) {
-                        if (player.getEntity() == null) {
-                            player.getSession().send(new AlertMessageComposer(Locale.getOrDefault("command.reload.roomReloaded", "The room was reloaded by a member of staff!")));
-                            player.getSession().send(new RoomForwardMessageComposer(newRoom.getId()));
-                        }
-                    }
-                });
-
-                RoomManager.getInstance().addReloadListener(client.getPlayer().getEntity().getRoom().getId(), reloadListener);
-                room.reload();
+                sendNotif(Locale.get("command.reload.figure"), client);
                 break;
-            }
+
         }
     }
 
@@ -210,11 +235,6 @@ public class ReloadCommand extends ChatCommand {
     @Override
     public String getPermission() {
         return "reload_command";
-    }
-    
-    @Override
-    public String getParameter() {
-        return "";
     }
 
     @Override

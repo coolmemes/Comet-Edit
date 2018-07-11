@@ -5,13 +5,17 @@ import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
+import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.outgoing.room.avatar.TalkMessageComposer;
 
 public class WiredActionBotGiveHandItem extends WiredActionItem {
     private final static int PARAM_HANDITEM = 0;
+
+    private BotEntity botEntity;
+    private int handItemId;
+    private String userUsername;
 
     /**
      * The default constructor
@@ -26,8 +30,8 @@ public class WiredActionBotGiveHandItem extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionBotGiveHandItem(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionBotGiveHandItem(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -41,25 +45,36 @@ public class WiredActionBotGiveHandItem extends WiredActionItem {
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
+    public boolean evaluate(RoomEntity entity, Object data) {
         if (this.getWiredData().getParams().size() != 1) {
-            return;
+            return false;
         }
 
         if (this.getWiredData().getText().isEmpty()) {
-            return;
+            return false;
         }
 
-        if (event.entity == null || !(event.entity instanceof PlayerEntity)) return;
+        if (entity == null || !(entity instanceof PlayerEntity)) return false;
 
-        int param = this.getWiredData().getParams().get(PARAM_HANDITEM);
+        this.handItemId = this.getWiredData().getParams().get(PARAM_HANDITEM);
 
         final String botName = this.getWiredData().getText();
-        final BotEntity botEntity = this.getRoom().getBots().getBotByName(botName);
+        this.botEntity = this.getRoom().getBots().getBotByName(botName);
+        this.userUsername = entity.getUsername();
 
-        if (botEntity != null) {
-            this.getRoom().getEntities().broadcastMessage(new TalkMessageComposer(botEntity.getId(), Locale.get("bots.chat.giveItemMessage").replace("%username%", event.entity.getUsername()), RoomManager.getInstance().getEmotions().getEmotion(":)"), 2));
-            event.entity.carryItem(param);
+        if (this.getWiredData().getDelay() >= 1) {
+            this.setTicks(RoomItemFactory.getProcessTime(this.getWiredData().getDelay() / 2));
+        } else {
+            this.onTickComplete();
+        }
+
+        return true;
+    }
+
+    public void onTickComplete() {
+        if (this.botEntity != null) {
+            this.getRoom().getEntities().broadcastMessage(new TalkMessageComposer(this.botEntity.getId(), Locale.get("bots.chat.giveItemMessage").replace("%username%", userUsername), RoomManager.getInstance().getEmotions().getEmotion(":)"), 2));
+            entity.carryItem(this.handItemId);
         }
     }
 }

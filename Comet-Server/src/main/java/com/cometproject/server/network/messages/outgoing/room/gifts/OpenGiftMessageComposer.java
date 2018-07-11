@@ -3,7 +3,6 @@ package com.cometproject.server.network.messages.outgoing.room.gifts;
 import com.cometproject.api.networking.messages.IComposer;
 import com.cometproject.server.game.catalog.types.gifts.GiftData;
 import com.cometproject.server.game.items.types.ItemDefinition;
-import com.cometproject.server.game.items.types.ItemType;
 import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.protocol.headers.Composers;
 
@@ -33,7 +32,7 @@ public class OpenGiftMessageComposer extends MessageComposer {
         msg.writeString(itemDefinition.getPublicName());
         msg.writeInt(presentId);
         msg.writeString(type);
-        msg.writeBoolean(itemDefinition.getItemType() == ItemType.FLOOR);
+        msg.writeBoolean(true);
         msg.writeString(giftData.getExtraData());
     }
 }

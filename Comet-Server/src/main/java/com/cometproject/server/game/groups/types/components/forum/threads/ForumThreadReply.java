@@ -4,7 +4,6 @@ import com.cometproject.api.networking.messages.IComposer;
 import com.cometproject.server.boot.Comet;
 import com.cometproject.server.game.players.PlayerManager;
 import com.cometproject.server.game.players.data.PlayerAvatar;
-import com.cometproject.server.storage.queries.groups.GroupForumThreadDao;
 
 public class ForumThreadReply {
     private int id;
@@ -17,10 +16,7 @@ public class ForumThreadReply {
 
     private int state;
 
-    private int adminId;
-    private String adminUsername;
-
-    public ForumThreadReply(int id, int index, String message, int threadId, int authorId, int authorTimestamp, int state, int adminId, String adminUsername) {
+    public ForumThreadReply(int id, int index, String message, int threadId, int authorId, int authorTimestamp, int state) {
         this.id = id;
         this.index = index;
         this.message = message;
@@ -28,8 +24,6 @@ public class ForumThreadReply {
         this.authorId = authorId;
         this.authorTimestamp = authorTimestamp;
         this.state = state;
-        this.adminId = adminId;
-        this.adminUsername = adminUsername;
     }
     
     public void compose(IComposer msg) {
@@ -47,10 +41,10 @@ public class ForumThreadReply {
         msg.writeString(this.getMessage());
         msg.writeByte(this.getState()); // state
 
-        msg.writeInt(this.adminId); // _adminId
-        msg.writeString(this.adminUsername); // _adminName
+        msg.writeInt(0); // _adminId
+        msg.writeString(""); // _adminName
         msg.writeInt(0); // _adminOperationTimeAsSeccondsAgo
-        msg.writeInt(GroupForumThreadDao.getPlayerMessageCount(playerAvatar.getId())); // messages by author todo: optimise if needed
+        msg.writeInt(0); // messages by author
     }
 
     public int getId() {
@@ -103,21 +97,5 @@ public class ForumThreadReply {
 
     public void setState(int state) {
         this.state = state;
-    }
-
-    public int getAdminId() {
-        return adminId;
-    }
-
-    public void setAdminId(int adminId) {
-        this.adminId = adminId;
-    }
-
-    public String getAdminUsername() {
-        return adminUsername;
-    }
-
-    public void setAdminUsername(String adminUsername) {
-        this.adminUsername = adminUsername;
     }
 }

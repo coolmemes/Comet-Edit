@@ -5,6 +5,7 @@ import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.protocol.headers.Composers;
 
 public class YouAreSpectatorMessageComposer extends MessageComposer {
+
     @Override
     public short getId() {
         return Composers.YouAreSpectatorMessageComposer;
@@ -12,6 +13,6 @@ public class YouAreSpectatorMessageComposer extends MessageComposer {
 
     @Override
     public void compose(IComposer msg) {
-
+        msg.writeBoolean(true);
     }
 }

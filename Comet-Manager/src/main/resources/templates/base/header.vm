@@ -17,11 +17,6 @@
             #if($customer)
                 <li><a href="/home">Home</a></li>
                 <li><a href="/support">Support</a></li>
-
-                #if($customer.hasRole("ADMINISTRATOR"))
-                    <li><a href="/admin/">Admin</a></li>
-                #end
-
                 <li><a href="/logout">Logout</a></li>
             #end
         </ul>

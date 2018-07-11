@@ -30,7 +30,9 @@ public class BoughtItemMessageComposer extends MessageComposer {
 
     public enum PurchaseType {
         GROUP,
-        BADGE
+        BADGE,
+        COLOR,
+        PREFIX
     }
 
     @Override

@@ -15,7 +15,7 @@ public class ApplyDanceMessageEvent implements Event {
             return;
         }
 
-        client.getPlayer().getEntity().unIdle();
+        if(!client.getPlayer().getEntity().getRoom().hasGameRoom()) client.getPlayer().getEntity().unIdle();
 
         if(!client.getPlayer().getEntity().isVisible()) {
             return;

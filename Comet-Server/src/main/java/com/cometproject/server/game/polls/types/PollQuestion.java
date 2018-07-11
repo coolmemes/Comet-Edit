@@ -10,6 +10,4 @@ public abstract class PollQuestion {
     public String getQuestion() {
         return question;
     }
-
-    public abstract int getType();
 }

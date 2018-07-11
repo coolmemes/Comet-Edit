@@ -2,11 +2,13 @@ package com.cometproject.server.game.rooms.types;
 
 import com.cometproject.api.game.rooms.settings.RoomAccessType;
 import com.cometproject.api.networking.messages.IComposer;
+import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.game.groups.GroupManager;
 import com.cometproject.server.game.groups.types.Group;
 import com.cometproject.server.game.navigator.NavigatorManager;
 import com.cometproject.server.game.navigator.types.publics.PublicRoom;
 import com.cometproject.server.game.rooms.RoomManager;
+import com.cometproject.server.game.rooms.competition.CompetitionManager;
 
 
 public class RoomWriter {
@@ -28,7 +30,7 @@ public class RoomWriter {
         msg.writeString(publicRoom != null ? publicRoom.getDescription() : room.getDescription());
         msg.writeInt(room.getTradeState().getState());
         msg.writeInt(room.getScore());
-        msg.writeInt(0);
+        msg.writeInt(CompetitionManager.getInstance().getVotesByRoomId(room.getId(), 1));
         msg.writeInt(room.getCategory() == null ? 1 : room.getCategory().getId());
 
         msg.writeInt(room.getTags().length);

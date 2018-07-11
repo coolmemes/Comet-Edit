@@ -12,7 +12,6 @@ public class ModToolUserKickMessageEvent implements Event {
     @Override
     public void handle(Session client, MessageEvent msg) throws Exception {
         if (!client.getPlayer().getPermissions().getRank().modTool()) {
-            // fuck off
             client.disconnect();
             return;
         }
@@ -27,7 +26,7 @@ public class ModToolUserKickMessageEvent implements Event {
                 if (!message.isEmpty())
                     session.send(new AdvancedAlertMessageComposer(message));
 
-                if (session.getPlayer().getPermissions().getRank().roomKickable() && session.getPlayer().getEntity() != null) {
+                if (session.getPlayer().getEntity() != null) {
                     session.getPlayer().getEntity().kick();
                 }
             }

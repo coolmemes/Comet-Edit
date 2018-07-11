@@ -31,6 +31,7 @@ public class FlagMeCommand extends ChatCommand {
                 sendNotif(Locale.getOrDefault("command.flagme.alreadybought", "Hey! You have entered this command already, click on your avatar and after that on the button 'Change your name'."), client);
                 return;
             } else {
+
                 client.getPlayer().getData().setChangingName(true);
                 client.send(new UserObjectMessageComposer(client.getPlayer()));
                 sendNotif(Locale.getOrDefault("command.flagme.bought", "You can change your username by clicking on yourself in a room and then click on 'Change your name'. You will be banned if your new name violates the rules!"), client);
@@ -41,11 +42,6 @@ public class FlagMeCommand extends ChatCommand {
     @Override
     public String getPermission() {
         return "flagme_command";
-    }
-
-    @Override
-    public String getParameter() {
-        return "";
     }
 
     @Override

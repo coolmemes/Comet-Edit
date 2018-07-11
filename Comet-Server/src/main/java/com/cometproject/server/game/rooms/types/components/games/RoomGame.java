@@ -44,7 +44,7 @@ public abstract class RoomGame implements CometTask {
 
             timer++;
         } catch (Exception e) {
-            log.error("Error during game process", e);
+            log.error("Error during game tick", e);
         }
     }
 
@@ -80,6 +80,10 @@ public abstract class RoomGame implements CometTask {
     public abstract void onGameEnds();
 
     public abstract void onGameStarts();
+
+    public boolean isActive() {
+        return active;
+    }
 
     public GameType getType() {
         return this.type;

@@ -2,7 +2,6 @@ package com.cometproject.server.network.messages.outgoing.messenger;
 
 import com.cometproject.api.networking.messages.IComposer;
 import com.cometproject.server.config.CometSettings;
-import com.cometproject.server.config.Locale;
 import com.cometproject.server.network.messages.composers.MessageComposer;
 import com.cometproject.server.protocol.headers.Composers;
 
@@ -19,15 +18,6 @@ public class MessengerConfigMessageComposer extends MessageComposer {
         msg.writeInt(CometSettings.messengerMaxFriends);
         msg.writeInt(300);
         msg.writeInt(800);
-        // msg.writeInt(CometSettings.messengerMaxFriends);
-
-        if (CometSettings.groupChatEnabled) {
-            msg.writeInt(1);
-
-            msg.writeInt(1);
-            msg.writeString(Locale.getOrDefault("group.chats", "Group Chats"));
-        } else {
-            msg.writeInt(0);
-        }
+        msg.writeInt(0);
     }
 }

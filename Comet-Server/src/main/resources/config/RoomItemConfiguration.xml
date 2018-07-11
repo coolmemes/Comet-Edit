@@ -10,7 +10,7 @@
     <item interaction-type="bed" class="com.cometproject.server.game.rooms.objects.items.types.floor.BedFloorItem" />
     <item interaction-type="vendingmachine" class="com.cometproject.server.game.rooms.objects.items.types.floor.VendingMachineFloorItem" />
     <item interaction-type="mannequin" class="com.cometproject.server.game.rooms.objects.items.types.floor.boutique.MannequinFloorItem" />
-    <item interaction-type="beach_shower" class="com.cometproject.server.game.rooms.objects.items.types.floor.summer.SummerShowerFloorItem" />
+    <item interaction-type="beach_shower" class="com.cometproject.server.game.rooms.objects.items.types.floor.SummerShowerFloorItem" />
     <item interaction-type="halo_tile" class="com.cometproject.server.game.rooms.objects.items.types.floor.hollywood.HaloTileFloorItem" />
     <item interaction-type="adjustable_height" class="com.cometproject.server.game.rooms.objects.items.types.floor.AdjustableHeightSeatFloorItem" />
 

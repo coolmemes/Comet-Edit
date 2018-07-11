@@ -28,6 +28,6 @@ public class PromotedRoomsMessageEvent implements Event {
         }
 
 
-        client.send(new NavigatorFlatListMessageComposer(0, "", promotedRooms));
+        client.send(new NavigatorFlatListMessageComposer(0, "THUMBNAIL", promotedRooms));
     }
 }

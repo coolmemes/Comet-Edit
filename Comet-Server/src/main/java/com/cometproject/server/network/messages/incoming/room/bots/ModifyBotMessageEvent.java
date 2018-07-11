@@ -1,7 +1,6 @@
 package com.cometproject.server.network.messages.incoming.room.bots;
 
 import com.cometproject.server.config.Locale;
-import com.cometproject.server.game.bots.BotMode;
 import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.game.rooms.filter.FilterResult;
 import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
@@ -41,10 +40,6 @@ public class ModifyBotMessageEvent implements Event {
         String data = msg.readString();
 
         BotEntity botEntity = room.getEntities().getEntityByBotId(botId);
-
-        if(botEntity.getData() == null) {
-            return;
-        }
 
         switch (action) {
             case 1:
@@ -90,12 +85,12 @@ public class ModifyBotMessageEvent implements Event {
             case 3:
                 // Relax
                 switch (botEntity.getData().getMode()) {
-                    case DEFAULT:
-                        botEntity.getData().setMode(BotMode.RELAXED);
+                    case "default":
+                        botEntity.getData().setMode("relaxed");
                         break;
 
-                    case RELAXED:
-                        botEntity.getData().setMode(BotMode.DEFAULT);
+                    case "relaxed":
+                        botEntity.getData().setMode("default");
                         break;
                 }
 
@@ -117,14 +112,6 @@ public class ModifyBotMessageEvent implements Event {
             case 5:
                 // Change name
                 final String botName = room.getBots().getAvailableName(data);
-                
-                FilterResult filterResult = RoomManager.getInstance().getFilter().filter(botName);
-
-                if (filterResult.isBlocked()) {
-                        client.send(new AdvancedAlertMessageComposer(Locale.get("game.message.blocked").replace("%s", filterResult.getMessage())));
-                        return;
-                }
-                
                 room.getBots().changeBotName(botEntity.getUsername(), botName);
 
                 botEntity.getData().setUsername(botName);

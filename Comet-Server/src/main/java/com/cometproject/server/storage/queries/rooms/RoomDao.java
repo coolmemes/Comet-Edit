@@ -7,7 +7,7 @@ import com.cometproject.server.game.rooms.models.types.StaticRoomModel;
 import com.cometproject.server.game.rooms.types.RoomData;
 import com.cometproject.server.game.rooms.types.RoomPromotion;
 import com.cometproject.server.storage.SqlHelper;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.JsonFactory;
 import com.google.common.collect.Lists;
 import org.apache.commons.collections4.map.ListOrderedMap;
 
@@ -166,7 +166,7 @@ public class RoomDao {
             preparedStatement.setInt(1, userId);
             preparedStatement.setString(2, username);
             preparedStatement.setString(3, name);
-            preparedStatement.setString(4, JsonUtil.getInstance().toJson(model));
+            preparedStatement.setString(4, JsonFactory.getInstance().toJson(model));
             preparedStatement.setString(5, description);
             preparedStatement.setInt(6, category);
             preparedStatement.setInt(7, maxVisitors);
@@ -201,7 +201,7 @@ public class RoomDao {
 
         try {
             sqlConnection = SqlHelper.getConnection();
-            preparedStatement = SqlHelper.prepare("INSERT into rooms (`owner_id`, `owner`, `name`, `model`, `description`, `category`, `max_users`, `trade_state`, `thickness_floor`, `thickness_wall`) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", sqlConnection, true);
+            preparedStatement = SqlHelper.prepare("INSERT into rooms (`owner_id`, `owner`, `name`, `model`, `description`, `category`, `max_users`, `trade_state`) VALUES(?, ?, ?, ?, ?, ?, ?, ?);", sqlConnection, true);
 
             preparedStatement.setInt(1, userId);
             preparedStatement.setString(2, username);
@@ -211,8 +211,6 @@ public class RoomDao {
             preparedStatement.setInt(6, category);
             preparedStatement.setInt(7, maxVisitors);
             preparedStatement.setString(8, tradeState.toString());
-            preparedStatement.setInt(9, 0);
-            preparedStatement.setInt(10, 0);
 
             preparedStatement.execute();
 
@@ -236,7 +234,7 @@ public class RoomDao {
                                   String password, int score, String tags, String decor, String model, boolean hideWalls, int thicknessWall,
                                   int thicknessFloor, boolean allowWalkthrough, boolean allowPets, String heightmap, RoomTradeState tradeState, RoomMuteState whoCanMute,
                                   RoomKickState whoCanKick, RoomBanState whoCanBan, int bubbleMode, int bubbleType, int bubbleScroll,
-                                  int chatDistance, int antiFloodSettings, String disabledCommands, int groupId, String requiredBadge) {
+                                  int chatDistance, int antiFloodSettings, String disabledCommands, int groupId, String requiredBadge, boolean wiredHidden) {
 
         Connection sqlConnection = null;
         PreparedStatement preparedStatement = null;
@@ -246,7 +244,7 @@ public class RoomDao {
             preparedStatement = SqlHelper.prepare("UPDATE rooms SET name = ?, description = ?, owner_id = ?, owner = ?, category = ?," +
                             " max_users = ?, access_type = ?, password = ?, score = ?, tags = ?, decorations = ?, model = ?, hide_walls = ?, thickness_wall = ?," +
                             " thickness_floor = ?, allow_walkthrough = ?, allow_pets = ?, heightmap = ?, mute_state = ?, ban_state = ?, kick_state = ?," +
-                            "bubble_mode = ?, bubble_type = ?, bubble_scroll = ?, chat_distance = ?, flood_level = ?, trade_state = ?, disabled_commands = ?, group_id = ?, required_badge = ? WHERE id = ?",
+                            "bubble_mode = ?, bubble_type = ?, bubble_scroll = ?, chat_distance = ?, flood_level = ?, trade_state = ?, disabled_commands = ?, group_id = ?, required_badge = ?, wired_hidden = ? WHERE id = ?",
                     sqlConnection);
 
             preparedStatement.setString(1, name);
@@ -279,8 +277,9 @@ public class RoomDao {
             preparedStatement.setString(28, disabledCommands);
             preparedStatement.setInt(29, groupId);
             preparedStatement.setString(30, requiredBadge);
+            preparedStatement.setString(31, wiredHidden ? "1" : "0");
 
-            preparedStatement.setInt(31, roomId);
+            preparedStatement.setInt(32, roomId);
 
             preparedStatement.execute();
         } catch (SQLException e) {

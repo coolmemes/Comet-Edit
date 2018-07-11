@@ -15,6 +15,7 @@ public class RedeemCreditsCommand extends ChatCommand {
     @Override
     public void execute(Session client, String[] params) {
         int coinsToGive = 0;
+        int ducketsToGive = 0;
         int diamondsToGive = 0;
 
         List<Long> itemsToRemove = Lists.newArrayList();
@@ -29,13 +30,24 @@ public class RedeemCreditsCommand extends ChatCommand {
 
             String itemName = playerItem.getDefinition().getItemName();
 
-            if (itemName.startsWith("CF_") || itemName.startsWith("CFC_")) {
+            if (itemName.startsWith("CF_")) {
                 try {
                     if (itemName.contains("_diamond_")) {
                         diamondsToGive += Integer.parseInt(itemName.split("_diamond_")[1]);
                     } else {
                         coinsToGive += Integer.parseInt(itemName.split("_")[1]);
                     }
+
+                    itemsToRemove.add(playerItem.getId());
+
+                    RoomItemDao.deleteItem(playerItem.getId());
+                } catch (Exception ignored) {
+
+                }
+            } else if (itemName.startsWith("CFC_")) {
+                try {
+
+                    ducketsToGive += Integer.parseInt(itemName.split("_")[1]);
 
                     itemsToRemove.add(playerItem.getId());
 
@@ -62,11 +74,15 @@ public class RedeemCreditsCommand extends ChatCommand {
             client.getPlayer().getData().increasePoints(diamondsToGive);
         }
 
+        if (ducketsToGive > 0) {
+            client.getPlayer().getData().increaseActivityPoints(ducketsToGive);
+        }
+
         if (coinsToGive > 0) {
             client.getPlayer().getData().increaseCredits(coinsToGive);
         }
 
-        if (diamondsToGive > 0 || coinsToGive > 0) {
+        if (diamondsToGive > 0 || coinsToGive > 0 || ducketsToGive > 0) {
             client.getPlayer().sendBalance();
             client.getPlayer().getData().save();
         }
@@ -76,11 +92,6 @@ public class RedeemCreditsCommand extends ChatCommand {
     @Override
     public String getPermission() {
         return "redeemcredits_command";
-    }
-    
-    @Override
-    public String getParameter() {
-        return "";
     }
 
     @Override

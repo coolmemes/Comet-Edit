@@ -12,7 +12,6 @@ public class EnableCommand extends ChatCommand {
         Room room = client.getPlayer().getEntity().getRoom();
 
         if ((room.getData().getOwnerId() != client.getPlayer().getId() && !client.getPlayer().getPermissions().getRank().roomFullControl())) {
-            sendNotif(Locale.getOrDefault("command.need.rights", "You have no rights to use this command in this room."), client);
             return;
         }
 
@@ -40,14 +39,14 @@ public class EnableCommand extends ChatCommand {
     public String getPermission() {
         return "enablecommand_command";
     }
-    
-    @Override
-    public String getParameter() {
-        return "";
-    }
 
     @Override
     public String getDescription() {
         return Locale.get("command.enablecommand.description");
+    }
+
+    @Override
+    public boolean canDisable() {
+        return true;
     }
 }

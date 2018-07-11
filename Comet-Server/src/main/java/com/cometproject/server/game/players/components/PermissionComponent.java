@@ -23,9 +23,9 @@ public class PermissionComponent implements PlayerPermissions {
 
     @Override
     public boolean hasCommand(String key) {
-        if(this.player.getData().getRank() == 255) {
-            return true;
-        }
+        //if(this.player.getData().getRank() == 255) {
+        //    return true;
+        //}
 
         if (PermissionsManager.getInstance().getOverrideCommands().containsKey(key)) {
             OverrideCommandPermission permission = PermissionsManager.getInstance().getOverrideCommands().get(key);

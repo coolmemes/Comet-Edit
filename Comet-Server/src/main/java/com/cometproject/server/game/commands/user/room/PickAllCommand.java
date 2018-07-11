@@ -17,10 +17,9 @@ public class PickAllCommand extends ChatCommand {
     public void execute(Session client, String message[]) {
         Room room = client.getPlayer().getEntity().getRoom();
 
-//        if (room == null || !room.getData().getOwner().equals(client.getPlayer().getData().getUsername())) {
-//            sendNotif(Locale.getOrDefault("command.need.rights", "You have no rights to use this command in this room."), client);
-//            return;
-//        }
+        if (room == null || !room.getData().getOwner().equals(client.getPlayer().getData().getUsername())) {
+            return;
+        }
 
         List<RoomItem> itemsToRemove = new ArrayList<>();
 
@@ -28,9 +27,9 @@ public class PickAllCommand extends ChatCommand {
         itemsToRemove.addAll(room.getItems().getWallItems().values());
 
         for (RoomItem item : itemsToRemove) {
-            if (item instanceof RoomItemFloor && item.getOwner() == client.getPlayer().getId()) {
+            if (item instanceof RoomItemFloor) {
                 room.getItems().removeItem((RoomItemFloor) item, client);
-            } else if (item instanceof RoomItemWall && item.getOwner() == client.getPlayer().getId()) {
+            } else if (item instanceof RoomItemWall) {
                 room.getItems().removeItem((RoomItemWall) item, client, true);
             }
         }
@@ -41,11 +40,6 @@ public class PickAllCommand extends ChatCommand {
     @Override
     public String getPermission() {
         return "pickall_command";
-    }
-    
-    @Override
-    public String getParameter() {
-        return "";
     }
 
     @Override

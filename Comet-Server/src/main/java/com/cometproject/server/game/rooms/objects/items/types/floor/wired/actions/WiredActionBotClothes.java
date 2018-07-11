@@ -5,35 +5,22 @@ import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
+import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.types.Room;
-import com.cometproject.server.network.messages.outgoing.room.avatar.TalkMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.UpdateInfoMessageComposer;
 
 public class WiredActionBotClothes extends WiredActionItem {
-    private final static int PARAM_HANDITEM = 0;
-    /**
-     * The default constructor
-     *
-     * @param id        The ID of the item
-     * @param itemId    The ID of the item definition
-     * @param room      The instance of the room
-     * @param owner     The ID of the owner
-     * @param ownerName The username of the owner
-     * @param x         The position of the item on the X axis
-     * @param y         The position of the item on the Y axis
-     * @param z         The position of the item on the z axis
-     * @param rotation  The orientation of the item
-     * @param data      The JSON object associated with this item
-     */
-    public WiredActionBotClothes(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    private BotEntity botEntity;
+    private String figure;
+
+    public WiredActionBotClothes(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
     public boolean requiresPlayer() {
-        return false;
+        return true;
     }
 
     @Override
@@ -42,31 +29,42 @@ public class WiredActionBotClothes extends WiredActionItem {
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
+    public boolean evaluate(RoomEntity entity, Object data) {
         if (!this.getWiredData().getText().contains("\t")) {
-            return;
+            return false;
         }
 
         if (this.getWiredData().getText().isEmpty()) {
-            return;
+            return false;
         }
 
-        final String[] data = this.getWiredData().getText().split("\t");
+        final String[] WiredData = this.getWiredData().getText().split("\t");
 
-        if (data.length != 2) {
-            return;
+        if (WiredData.length != 2) {
+            return false;
         }
 
-        final String botName = data[0];
-        String figure = data[1];
+        final String botName = WiredData[0];
+        this.figure = WiredData[1];
 
-        final BotEntity botEntity = this.getRoom().getBots().getBotByName(botName);
+        this.botEntity = this.getRoom().getBots().getBotByName(botName);
 
-        if (botEntity != null) {
-            botEntity.getData().setFigure(figure);
-            this.getRoom().getEntities().broadcastMessage(new UpdateInfoMessageComposer(botEntity));
+        if (this.getWiredData().getDelay() >= 1) {
+            this.setTicks(RoomItemFactory.getProcessTime(this.getWiredData().getDelay() / 2));
+        } else {
+            this.onTickComplete();
+        }
 
-            botEntity.getData().save();
+        return true;
+    }
+
+
+    public void onTickComplete() {
+        if (this.botEntity != null) {
+            this.botEntity.getData().setFigure(this.figure);
+            this.getRoom().getEntities().broadcastMessage(new UpdateInfoMessageComposer(this.botEntity));
+
+            this.botEntity.getData().save();
         }
     }
 }

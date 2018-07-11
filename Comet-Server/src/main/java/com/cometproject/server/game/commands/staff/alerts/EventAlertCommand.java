@@ -1,5 +1,6 @@
 package com.cometproject.server.game.commands.staff.alerts;
 
+import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.commands.ChatCommand;
 import com.cometproject.server.network.NetworkManager;
@@ -19,17 +20,12 @@ public class EventAlertCommand extends ChatCommand {
                         Locale.get("command.eventalert.alerttitle"),
                         Locale.get("command.eventalert.message").replace("%message%", this.merge(params)).replace("%username%", client.getPlayer().getData().getUsername()
                         ) + "<br><br><i> " + client.getPlayer().getData().getUsername() + "</i>",
-                        Locale.get("command.eventalert.buttontitle"), "event:navigator/goto/" + client.getPlayer().getEntity().getRoom().getId(), "game_promo_small"));
+                        Locale.get("command.eventalert.buttontitle"), "event:navigator/goto/" + client.getPlayer().getEntity().getRoom().getId(), CometSettings.eventImg));
     }
 
     @Override
     public String getPermission() {
         return "eventalert_command";
-    }
-    
-    @Override
-    public String getParameter() {
-        return "";
     }
 
     @Override

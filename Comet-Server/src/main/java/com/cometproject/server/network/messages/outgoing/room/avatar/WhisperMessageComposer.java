@@ -16,10 +16,6 @@ public class WhisperMessageComposer extends MessageComposer {
         this.bubbleId = bubbleId;
     }
 
-    public WhisperMessageComposer(int playerId, String message) {
-        this(playerId, message, 0);
-    }
-
     @Override
     public short getId() {
         return Composers.WhisperMessageComposer;

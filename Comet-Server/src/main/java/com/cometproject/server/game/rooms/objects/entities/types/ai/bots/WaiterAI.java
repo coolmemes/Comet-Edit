@@ -6,10 +6,9 @@ import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.ai.AbstractBotAI;
 import com.cometproject.server.network.messages.outgoing.room.avatar.TalkMessageComposer;
-import com.cometproject.server.network.messages.outgoing.room.permissions.FloodFilterMessageComposer;
 
 public class WaiterAI extends AbstractBotAI {
-    public static final Drink[] drinks = {
+    private static final Drink[] drinks = {
             new Drink("tea", 1),
             new Drink("juice", 2),
             new Drink("milk", 5),
@@ -38,11 +37,6 @@ public class WaiterAI extends AbstractBotAI {
 
         for (Drink drink : drinks) {
             if (triggerMessage.contains(Locale.get("drink." + drink.getTrigger()))) {
-                if (entity.getPlayer().getRoomFloodTime() >= 1) {
-                    entity.getPlayer().getSession().send(new FloodFilterMessageComposer(entity.getPlayer().getRoomFloodTime()));
-                    return false;
-                }
-                
                 if (entity.getPosition().distanceTo(this.getEntity()) >= 4) {
                     this.getEntity().getRoom().getEntities().broadcastMessage(new TalkMessageComposer(this.getEntity().getId(), Locale.get("bots.chat.tooFar").replace("%username%", entity.getUsername()), RoomManager.getInstance().getEmotions().getEmotion(":("), 2));
                     return false;
@@ -58,7 +52,7 @@ public class WaiterAI extends AbstractBotAI {
         return false;
     }
 
-    public static class Drink {
+    private static class Drink {
         private String trigger;
         private int handItemId;
 

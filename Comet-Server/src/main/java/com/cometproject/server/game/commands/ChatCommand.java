@@ -1,9 +1,9 @@
 package com.cometproject.server.game.commands;
 
+import com.cometproject.api.networking.messages.IMessageComposer;
 import com.cometproject.server.config.Locale;
-import com.cometproject.server.network.messages.outgoing.notification.AlertMessageComposer;
+import com.cometproject.server.network.messages.outgoing.notification.AdvancedAlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.NotificationMessageComposer;
-import com.cometproject.server.network.messages.outgoing.room.avatar.WhisperMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 
 
@@ -11,27 +11,21 @@ public abstract class ChatCommand {
     public abstract void execute(Session client, String[] params);
 
     public abstract String getPermission();
-    
-    public abstract String getParameter();
 
     public abstract String getDescription();
+
+    public final IMessageComposer success(String msg) {
+        return new AdvancedAlertMessageComposer(Locale.get("command.successful"), msg);
+    }
 
     public static void sendNotif(String msg, Session session) {
         session.send(new NotificationMessageComposer("generic", msg));
     }
 
-    public static void sendAlert(String msg, Session session) {
-        session.send(new AlertMessageComposer(msg));
+    public static void sendImageNotif(String img, String msg, Session session) {
+        session.send(new NotificationMessageComposer(img, msg, ""));
     }
 
-    public static void sendWhisper(String msg, Session session) {
-        session.send(new WhisperMessageComposer(session.getPlayer().getEntity().getId(), msg));
-    }
-
-    public static void isExecuted(Session session) {
-        session.send(new NotificationMessageComposer("up", Locale.getOrDefault("command.executed", "Command is executed succesfully.")));
-    }
-    
     public final String merge(String[] params) {
         final StringBuilder stringBuilder = new StringBuilder();
 
@@ -57,6 +51,8 @@ public abstract class ChatCommand {
         return mergedParams.toString();
     }
 
+    public String getParams() { return ""; }
+
     public boolean isHidden() {
         return false;
     }
@@ -66,10 +62,6 @@ public abstract class ChatCommand {
     }
 
     public boolean isAsync() {
-        return false;
-    }
-
-    public boolean bypassFilter() {
         return false;
     }
 

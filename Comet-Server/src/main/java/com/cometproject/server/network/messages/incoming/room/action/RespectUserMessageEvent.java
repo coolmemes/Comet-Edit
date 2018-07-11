@@ -40,7 +40,7 @@ public class RespectUserMessageEvent implements Event {
         }
 
         user.getPlayer().getStats().incrementRespectPoints(1);
-        user.getPlayer().getAchievements().progressAchievement(AchievementType.RESPECT_EARNED, 1);
+        user.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_42, 1);
 
         client.getPlayer().getStats().decrementDailyRespects(1);
 
@@ -48,6 +48,6 @@ public class RespectUserMessageEvent implements Event {
         room.getEntities().broadcastMessage(new GiveRespectMessageComposer(user.getPlayer().getId(), user.getPlayer().getStats().getRespectPoints()));
 
         client.getPlayer().getQuests().progressQuest(QuestType.SOCIAL_RESPECT);
-        client.getPlayer().getAchievements().progressAchievement(AchievementType.RESPECT_GIVEN, 1);
+        client.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_43, 1);
     }
 }

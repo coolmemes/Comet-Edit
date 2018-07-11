@@ -1,18 +1,24 @@
 package com.cometproject.server.game.achievements;
 
+import com.cometproject.server.game.achievements.types.Achievement;
+import com.cometproject.server.game.achievements.types.AchievementCategory;
 import com.cometproject.server.game.achievements.types.AchievementType;
+import com.cometproject.server.game.players.components.AchievementComponent;
+import com.cometproject.server.game.players.components.types.achievements.AchievementProgress;
 import com.cometproject.server.storage.queries.achievements.AchievementDao;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import org.apache.log4j.Logger;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class AchievementManager implements Initialisable {
+public class AchievementManager implements Initializable {
     private static AchievementManager achievementManager;
     private static final Logger log = Logger.getLogger(AchievementManager.class.getName());
 
     private final Map<AchievementType, AchievementGroup> achievementGroups;
+
 
     public AchievementManager() {
         this.achievementGroups = new ConcurrentHashMap<>();

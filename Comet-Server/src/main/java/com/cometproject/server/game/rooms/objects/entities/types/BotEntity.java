@@ -15,7 +15,7 @@ import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.game.rooms.types.misc.ChatEmotion;
 import com.cometproject.server.network.messages.outgoing.room.avatar.LeaveRoomMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.TalkMessageComposer;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.JsonFactory;
 
 import java.util.LinkedList;
 import java.util.Map;
@@ -41,21 +41,21 @@ public class BotEntity extends RoomEntity {
                 this.ai = new DefaultAI(this);
                 break;
 
-            case WAITER:
+            case "waiter":
                 this.ai = new WaiterAI(this);
                 break;
 
-            case MIMIC:
+            case "mimic":
                 this.ai = new MinionAI(this);
                 break;
 
-            case SPY:
+            case "spy":
                 this.ai = new SpyAI(this);
 
                 if (this.data.getData() == null) {
                     this.dataObject = new SpyBotData(new LinkedList<>());
                 } else {
-                    this.dataObject = JsonUtil.getInstance().fromJson(this.data.getData(), SpyBotData.class);
+                    this.dataObject = JsonFactory.getInstance().fromJson(this.data.getData(), SpyBotData.class);
                 }
 
                 break;
@@ -67,8 +67,8 @@ public class BotEntity extends RoomEntity {
     }
 
     @Override
-    public boolean joinRoom(Room room, String password) {
-        return true;
+    public void joinRoom(Room room, String password) {
+
     }
 
     @Override
@@ -102,7 +102,7 @@ public class BotEntity extends RoomEntity {
 
     public void saveDataObject() {
         if (this.dataObject != null) {
-            this.data.setData(JsonUtil.getInstance().toJson(this.dataObject));
+            this.data.setData(JsonFactory.getInstance().toJson(this.dataObject));
             this.data.save();
         }
     }

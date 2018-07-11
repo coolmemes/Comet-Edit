@@ -1,24 +1,20 @@
 package com.cometproject.server.boot;
 
 import com.cometproject.server.boot.utils.ConsoleCommands;
-import com.cometproject.server.boot.utils.ShutdownProcess;
-import com.cometproject.server.game.rooms.RoomManager;
-import com.cometproject.server.network.NetworkManager;
-import com.cometproject.server.utilities.CometRuntime;
-import com.cometproject.api.stats.CometStats;
-import com.cometproject.server.utilities.TimeSpan;
+import com.cometproject.server.boot.utils.ShutdownHook;
+import com.cometproject.server.boot.utils.gui.CometGui;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import java.io.FileInputStream;
 import java.lang.management.ManagementFactory;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 
 public class Comet {
-    public static String instanceId = UUID.randomUUID().toString();
-
     /**
      * Logging during start-up & console commands
      */
@@ -49,10 +45,7 @@ public class Comet {
      */
     public static boolean showGui = false;
 
-    /**
-     * Whether we're running Comet in daemon mode or not
-     */
-    public static boolean daemon = false;
+    public static boolean allowToUseDelayOnWireds = true;
 
     /**
      * Start the server!
@@ -95,45 +88,21 @@ public class Comet {
         } else {
             Map<String, String> cometConfiguration = new HashMap<>();
 
-            // Parse args
-            List<String> arguments = new ArrayList<>();
-
             for (int i = 0; i < args.length; i++) {
-                final String arg = args[i];
-
-                if (arg.contains(" ")) {
-                    final String[] splitString = arg.split(" ");
-
-                    for (int j = 0; j < splitString.length; j++) {
-                        arguments.add(splitString[j]);
-                    }
-                } else {
-                    arguments.add(arg);
-                }
-            }
-
-            for (String arg : arguments) {
-                if (arg.equals("--debug-logging")) {
+                if (args[i].equals("--debug-logging")) {
+                    isDebugging = true;
                     logLevel = Level.DEBUG;
                 }
 
-                if (arg.equals("--gui")) {
+                if(args[i].equals("--gui")) {
                     // start GUI!
                     showGui = true;
                 }
 
-                if (arg.equals("--daemon")) {
-                    daemon = true;
-                }
-
-                if (arg.startsWith("--instance-name=")) {
-                    instanceId = arg.replace("--instance-name=", "");
-                }
-
-                if (!arg.contains("="))
+                if (!args[i].contains("="))
                     continue;
 
-                String[] splitArgs = arg.split("=");
+                String[] splitArgs = args[i].split("=");
 
                 cometConfiguration.put(splitArgs[0], splitArgs.length != 1 ? splitArgs[1] : "");
             }
@@ -144,11 +113,8 @@ public class Comet {
         Logger.getRootLogger().setLevel(logLevel);
         server.init();
 
-        if (!daemon) {
-            ConsoleCommands.init();
-        }
-
-        ShutdownProcess.init();
+        ConsoleCommands.init();
+        ShutdownHook.init();
     }
 
     /**
@@ -170,6 +136,10 @@ public class Comet {
         return (System.currentTimeMillis() / 1000L);
     }
 
+    public static long getTimeMillis() {
+        return System.currentTimeMillis();
+    }
+
     /**
      * Get the current build of Comet
      *
@@ -180,32 +150,25 @@ public class Comet {
     }
 
     /**
-     * Gets the current server stats
-     *
-     * @return Server stats object
-     */
-    public static CometStats getStats() {
-        CometStats statsInstance = new CometStats();
-
-        statsInstance.setPlayers(NetworkManager.getInstance().getSessions().getUsersOnlineCount());
-        statsInstance.setRooms(RoomManager.getInstance().getRoomInstances().size());
-        statsInstance.setUptime(TimeSpan.millisecondsToDate(System.currentTimeMillis() - Comet.start));
-
-        statsInstance.setProcessId(CometRuntime.processId);
-        statsInstance.setAllocatedMemory((Runtime.getRuntime().totalMemory() / 1024) / 1024);
-        statsInstance.setUsedMemory(statsInstance.getAllocatedMemory() - (Runtime.getRuntime().freeMemory() / 1024) / 1024);
-        statsInstance.setOperatingSystem(CometRuntime.operatingSystem + " (" + CometRuntime.operatingSystemArchitecture + ")");
-        statsInstance.setCpuCores(Runtime.getRuntime().availableProcessors());
-
-        return statsInstance;
-    }
-
-    /**
      * Get the main server instance
      *
      * @return The main server instance
      */
     public static CometServer getServer() {
         return server;
+    }
+
+    public static boolean listsEquals(List<? extends Object> list1, List<? extends Object> list2) {
+        return new HashSet<>(list1).equals(new HashSet<>(list2));
+    }
+
+    public static int getTimeInt() { return (int) (new Date().getTime()/1000); }
+
+    public static long getTimeFromString(String date) {
+        try {
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(date).getTime()/1000;
+        } catch (ParseException e) {
+            return 0;
+        }
     }
 }

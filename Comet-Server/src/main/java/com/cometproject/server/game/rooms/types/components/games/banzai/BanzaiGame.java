@@ -1,13 +1,12 @@
 package com.cometproject.server.game.rooms.types.components.games.banzai;
-
 import com.cometproject.server.game.achievements.types.AchievementType;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntityType;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
-import com.cometproject.server.game.rooms.objects.items.types.floor.banzai.BanzaiTileFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.banzai.BanzaiTimerFloorItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.highscore.HighscoreClassicFloorItem;
+import com.cometproject.server.game.rooms.objects.items.types.floor.games.banzai.BanzaiScoreFloorItem;
+import com.cometproject.server.game.rooms.objects.items.types.floor.games.banzai.BanzaiTileFloorItem;
+import com.cometproject.server.game.rooms.objects.items.types.floor.games.banzai.BanzaiTimerFloorItem;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerGameEnds;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerGameStarts;
 import com.cometproject.server.game.rooms.types.Room;
@@ -15,9 +14,6 @@ import com.cometproject.server.game.rooms.types.components.games.GameTeam;
 import com.cometproject.server.game.rooms.types.components.games.GameType;
 import com.cometproject.server.game.rooms.types.components.games.RoomGame;
 import com.cometproject.server.network.messages.outgoing.room.avatar.ActionMessageComposer;
-import com.google.common.collect.Lists;
-
-import java.util.List;
 import java.util.Map;
 
 
@@ -32,7 +28,6 @@ public class BanzaiGame extends RoomGame {
     @Override
     public void tick() {
         if (this.startBanzaiTileCount != 0 && this.banzaiTileCount == 0) {
-            // Stop the game!
             this.timer = this.gameLength;
         }
 
@@ -47,7 +42,7 @@ public class BanzaiGame extends RoomGame {
 
                 if (this.getGameComponent().getTeam(playerEntity.getPlayerId()) != GameTeam.NONE) {
                     if (playerEntity.getBanzaiPlayerAchievement() >= 60) {
-                        playerEntity.getPlayer().getAchievements().progressAchievement(AchievementType.BB_PLAYER, 1);
+                        playerEntity.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_9, 1);
                         playerEntity.setBanzaiPlayerAchievement(0);
                     } else {
                         playerEntity.incrementBanzaiPlayerAchievement();
@@ -72,6 +67,7 @@ public class BanzaiGame extends RoomGame {
         this.startBanzaiTileCount = this.banzaiTileCount;
 
         this.updateScoreboard(null);
+
     }
 
     @Override
@@ -88,7 +84,8 @@ public class BanzaiGame extends RoomGame {
             }
         }
 
-        final List<HighscoreClassicFloorItem> scoreboards = this.room.getItems().getByClass(HighscoreClassicFloorItem.class);
+        //TODO: Highscores
+        /*final List<HighscoreClassicFloorItem> scoreboards = this.room.getItems().getByClass(HighscoreClassicFloorItem.class);
 
         if (scoreboards.size() != 0) {
             List<Integer> winningPlayers = this.room.getGame().getTeams().get(this.winningTeam());
@@ -104,13 +101,14 @@ public class BanzaiGame extends RoomGame {
                 }
             }
         }
+        */
 
         for (RoomEntity entity : this.room.getEntities().getAllEntities().values()) {
             if (entity.getEntityType().equals(RoomEntityType.PLAYER)) {
                 PlayerEntity playerEntity = (PlayerEntity) entity;
 
                 if (this.getGameComponent().getTeam(playerEntity.getPlayerId()).equals(winningTeam) && winningTeam != GameTeam.NONE) {
-                    playerEntity.getPlayer().getAchievements().progressAchievement(AchievementType.BB_WINNER, 1);
+                    playerEntity.getPlayer().getAchievements().progressAchievement(AchievementType.ACH_11, 1);
                     this.room.getEntities().broadcastMessage(new ActionMessageComposer(playerEntity.getId(), 1)); // wave o/
                 }
             }

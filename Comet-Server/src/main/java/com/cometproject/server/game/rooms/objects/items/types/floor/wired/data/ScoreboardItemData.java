@@ -21,6 +21,10 @@ public class ScoreboardItemData {
     }
 
     public List<HighscoreEntry> getEntries() {
+        synchronized (this.entries) {
+            this.entries.sort(comparator);
+        }
+
         return this.entries;
     }
 

@@ -5,6 +5,7 @@ import com.cometproject.server.game.commands.ChatCommand;
 import com.cometproject.server.game.players.PlayerManager;
 import com.cometproject.server.game.players.data.PlayerAvatar;
 import com.cometproject.server.network.NetworkManager;
+import com.cometproject.server.network.messages.outgoing.user.newyearresolution.NewYearResolutionCompletedMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.storage.queries.player.PlayerDao;
 import com.cometproject.server.storage.queries.player.inventory.InventoryDao;
@@ -39,11 +40,6 @@ public class GiveBadgeCommand extends ChatCommand {
     @Override
     public String getPermission() {
         return "givebadge_command";
-    }
-    
-    @Override
-    public String getParameter() {
-        return Locale.getOrDefault("command.parameter.username" + " " + "command.parameter.badge", "%username% %badge%");
     }
 
     @Override

@@ -64,4 +64,49 @@ public class FilterDao {
             SqlHelper.closeSilently(sqlConnection);
         }
     }
+
+    public static void insert(String word) {
+        Connection sqlConnection = null;
+        PreparedStatement preparedStatement = null;
+
+        try {
+            sqlConnection = SqlHelper.getConnection();
+
+            preparedStatement = SqlHelper.prepare("INSERT INTO wordfilter (`word`, `replacement`) VALUES(?, ?)", sqlConnection);
+
+            preparedStatement.setString(1, word);
+            preparedStatement.setString(2, "bobba");
+            preparedStatement.addBatch();
+            preparedStatement.executeBatch();
+
+
+        } catch (SQLException e) {
+            SqlHelper.handleSqlException(e);
+        } finally {
+            SqlHelper.closeSilently(preparedStatement);
+            SqlHelper.closeSilently(sqlConnection);
+        }
+    }
+
+    public static void remove(String word) {
+        Connection sqlConnection = null;
+        PreparedStatement preparedStatement = null;
+
+        try {
+            sqlConnection = SqlHelper.getConnection();
+
+            preparedStatement = SqlHelper.prepare("DELETE FROM wordfilter WHERE `word` = '?'", sqlConnection);
+
+            preparedStatement.setString(1, word);
+            preparedStatement.addBatch();
+            preparedStatement.executeBatch();
+
+
+        } catch (SQLException e) {
+            SqlHelper.handleSqlException(e);
+        } finally {
+            SqlHelper.closeSilently(preparedStatement);
+            SqlHelper.closeSilently(sqlConnection);
+        }
+    }
 }

@@ -5,9 +5,9 @@ import com.cometproject.server.game.rooms.objects.entities.pathfinding.Pathfinde
 import com.cometproject.server.game.rooms.objects.entities.pathfinding.Square;
 import com.cometproject.server.game.rooms.objects.entities.pathfinding.types.ItemPathfinder;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
+import com.cometproject.server.game.rooms.objects.items.RoomItemFactory;
 import com.cometproject.server.game.rooms.objects.items.RoomItemFloor;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.triggers.WiredTriggerCollision;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
@@ -34,8 +34,8 @@ public class WiredActionChase extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionChase(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionChase(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -49,8 +49,20 @@ public class WiredActionChase extends WiredActionItem {
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
-        if (this.getWiredData().getSelectedIds().size() == 0) return;
+    public boolean evaluate(RoomEntity entity, Object data) {
+        if (this.getWiredData().getSelectedIds().size() == 0) return false;
+
+        if (this.getWiredData().getDelay() >= 1) {
+            this.setTicks(RoomItemFactory.getProcessTime(this.getWiredData().getDelay() / 2));
+        } else {
+            this.onTickComplete();
+        }
+
+        return true;
+    }
+
+    @Override
+    public void onTickComplete(){
 
         for (long itemId : this.getWiredData().getSelectedIds()) {
             RoomItemFloor floorItem = this.getRoom().getItems().getFloorItem(itemId);
@@ -62,13 +74,8 @@ public class WiredActionChase extends WiredActionItem {
 
             if (nearestEntity != null) {
                 if (this.isCollided(nearestEntity, floorItem)) {
-                    if (floorItem.getCollision() != nearestEntity) {
-                        floorItem.setCollision(nearestEntity);
-
-                        WiredTriggerCollision.executeTriggers(nearestEntity);
-                    }
-
-                    continue;
+                    floorItem.setCollision(nearestEntity);
+                    WiredTriggerCollision.executeTriggers(nearestEntity, floorItem);
                 }
 
                 this.targetId = nearestEntity.getId();
@@ -86,7 +93,10 @@ public class WiredActionChase extends WiredActionItem {
                 this.moveToTile(floorItem, positionFrom, null);
             }
         }
+
+        return;
     }
+
 
     public boolean isCollided(PlayerEntity entity, RoomItemFloor floorItem) {
         boolean tilesTouching = entity.getPosition().touching(floorItem.getPosition());

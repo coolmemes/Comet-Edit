@@ -1,6 +1,5 @@
 package com.cometproject.server.network.messages.incoming.room.item;
 
-import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.server.game.rooms.objects.items.RoomItemWall;
 import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.game.rooms.types.Room;
@@ -13,14 +12,7 @@ import com.cometproject.server.storage.queries.rooms.RoomItemDao;
 
 public class ChangeWallItemPositionMessageEvent implements Event {
     public void handle(Session client, MessageEvent msg) {
-        int virtualId = msg.readInt();
-
-        Long itemId = ItemManager.getInstance().getItemIdByVirtualId(virtualId);
-
-        if(itemId == null) {
-            return;
-        }
-
+        int itemId = msg.readInt();
         String position = Position.validateWallPosition(msg.readString());
 
         Room room = client.getPlayer().getEntity().getRoom();

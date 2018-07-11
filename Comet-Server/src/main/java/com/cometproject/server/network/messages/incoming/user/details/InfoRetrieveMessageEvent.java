@@ -2,6 +2,7 @@ package com.cometproject.server.network.messages.incoming.user.details;
 
 import com.cometproject.server.config.CometSettings;
 import com.cometproject.server.network.messages.incoming.Event;
+import com.cometproject.server.network.messages.outgoing.catalog.subscription.SubscriptionGiftAlertMessageComposer;
 import com.cometproject.server.network.messages.outgoing.messenger.MessengerConfigMessageComposer;
 import com.cometproject.server.network.messages.outgoing.navigator.NavigatorMetaDataMessageComposer;
 import com.cometproject.server.network.messages.outgoing.user.achievements.AchievementPointsMessageComposer;
@@ -23,7 +24,8 @@ public class InfoRetrieveMessageEvent implements Event {
         client.send(new UserObjectMessageComposer(client.getPlayer()));
         client.send(new BuildersClubMembershipMessageComposer());
         client.send(new AllowancesMessageComposer(client.getPlayer().getData().getRank()));
-//        client.send(new CitizenshipStatusMessageComposer());
+        //client.send(new SubscriptionGiftAlertMessageComposer(1));
+        //client.send(new CitizenshipStatusMessageComposer());
         client.send(new AchievementPointsMessageComposer(client.getPlayer().getData().getAchievementPoints()));
 
         client.send(new MessengerConfigMessageComposer());

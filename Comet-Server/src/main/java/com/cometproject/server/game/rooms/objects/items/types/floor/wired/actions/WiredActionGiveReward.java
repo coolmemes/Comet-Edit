@@ -13,7 +13,6 @@ import com.cometproject.server.game.players.types.Player;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.items.types.floor.wired.base.WiredActionItem;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.events.WiredItemEvent;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.network.messages.outgoing.catalog.UnseenItemsMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.AlertMessageComposer;
@@ -45,6 +44,7 @@ public class WiredActionGiveReward extends WiredActionItem {
     public static final String REWARD_DIAMONDS = "diamonds";
     public static final String REWARD_COINS = "coins";
     public static final String REWARD_DUCKETS = "duckets";
+    public static final String REWARD_SEASONAL = "seasonal";
 
     private static final long ONE_DAY = 86400;
     private static final long ONE_HOUR = 3600;
@@ -53,7 +53,7 @@ public class WiredActionGiveReward extends WiredActionItem {
     private int totalRewardCounter = 0;
 
     private List<Reward> rewards;
-    private Map<Integer, Set<String>> givenRewards;
+    private Set<Integer> givenRewards;
 
     private final int ownerRank;
 
@@ -70,8 +70,8 @@ public class WiredActionGiveReward extends WiredActionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredActionGiveReward(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredActionGiveReward(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
 
         if (!rewardTimings.containsKey(this.getId())) {
             rewardTimings.put(this.getId(), Maps.newConcurrentMap());
@@ -99,20 +99,55 @@ public class WiredActionGiveReward extends WiredActionItem {
     }
 
     @Override
-    public void onEventComplete(WiredItemEvent event) {
-        if (this.getWiredData().getParams().size() != 4 || !(event.entity instanceof PlayerEntity) || this.rewards.size() == 0) {
-            return;
+    public boolean evaluate(RoomEntity entity, Object data) {
+        if (this.getWiredData().getParams().size() != 4 || !(entity instanceof PlayerEntity) || this.rewards.size() == 0) {
+            return false;
         }
 
-        if (CometSettings.roomWiredRewardMinimumRank > this.ownerRank) return;
+        if (CometSettings.roomWiredRewardMinimumRank > this.ownerRank) return false;
 
-        PlayerEntity playerEntity = ((PlayerEntity) event.entity);
+        PlayerEntity playerEntity = ((PlayerEntity) entity);
 
         final int howOften = this.getWiredData().getParams().get(PARAM_HOW_OFTEN);
         final boolean unique = this.getWiredData().getParams().get(PARAM_UNIQUE) == 1;
         final int totalRewardLimit = this.getWiredData().getParams().get(PARAM_TOTAL_REWARD_LIMIT);
 
         int errorCode = -1;
+
+        switch (howOften) {
+            case REWARD_LIMIT_ONCE:
+                if(this.givenRewards.contains(playerEntity.getPlayerId())) {
+                    errorCode = 1;
+                } else {
+                    this.givenRewards.add(playerEntity.getPlayerId());
+                    RoomItemDao.saveReward(this.getId(), ((PlayerEntity) entity).getPlayerId());
+                }
+
+                if (rewardTimings.get(this.getId()).containsKey(playerEntity.getPlayerId())) {
+                    errorCode = 1;
+                }
+                break;
+
+            case REWARD_LIMIT_DAY:
+                if (rewardTimings.get(this.getId()).containsKey(playerEntity.getPlayerId())) {
+                    long lastReward = rewardTimings.get(this.getId()).get(playerEntity.getPlayerId());
+
+                    if ((Comet.getTime() - lastReward) < ONE_DAY) {
+                        errorCode = 2;
+                    }
+                }
+                break;
+
+            case REWARD_LIMIT_HOUR:
+                if (rewardTimings.get(this.getId()).containsKey(playerEntity.getPlayerId())) {
+                    long lastReward = rewardTimings.get(this.getId()).get(playerEntity.getPlayerId());
+
+                    if ((Comet.getTime() - lastReward) < ONE_HOUR) {
+                        errorCode = 3;
+                    }
+                }
+                break;
+        }
 
         if (totalRewardLimit != 0) {
             if (this.totalRewardCounter >= totalRewardLimit) {
@@ -122,66 +157,14 @@ public class WiredActionGiveReward extends WiredActionItem {
 
         if (errorCode != -1) {
             playerEntity.getPlayer().getSession().send(new WiredRewardMessageComposer(errorCode));
-            return;
+            return false;
         }
 
         this.totalRewardCounter++;
 
         boolean receivedReward = false;
 
-        errorCode = -1;
-
         for (Reward reward : this.rewards) {
-            switch (howOften) {
-                case REWARD_LIMIT_ONCE:
-                    if(this.givenRewards.containsKey(playerEntity.getPlayerId()) && this.givenRewards.get(playerEntity.getPlayerId()).contains(reward.productCode)) {
-                        errorCode = 1;
-                    } else {
-                        if(!this.givenRewards.containsKey(playerEntity.getPlayerId())) {
-                            this.givenRewards.put(playerEntity.getPlayerId(), new HashSet<>());
-                        }
-
-                        this.givenRewards.get(playerEntity.getPlayerId()).add(reward.productCode);
-                        RoomItemDao.saveReward(this.getId(), ((PlayerEntity) event.entity).getPlayerId(), reward.productCode);
-                    }
-
-                    if (rewardTimings.get(this.getId()).containsKey(playerEntity.getPlayerId())) {
-                        errorCode = 1;
-                    }
-
-                    break;
-
-                case REWARD_LIMIT_DAY:
-                    if (rewardTimings.get(this.getId()).containsKey(playerEntity.getPlayerId())) {
-                        long lastReward = rewardTimings.get(this.getId()).get(playerEntity.getPlayerId());
-
-                        if ((Comet.getTime() - lastReward) < ONE_DAY) {
-                            errorCode = 2;
-                        }
-                    }
-                    break;
-
-                case REWARD_LIMIT_HOUR:
-                    if (rewardTimings.get(this.getId()).containsKey(playerEntity.getPlayerId())) {
-                        long lastReward = rewardTimings.get(this.getId()).get(playerEntity.getPlayerId());
-
-                        if ((Comet.getTime() - lastReward) < ONE_HOUR) {
-                            errorCode = 3;
-                        }
-                    }
-                    break;
-            }
-
-            if (totalRewardLimit != 0) {
-                if (this.totalRewardCounter >= totalRewardLimit) {
-                    errorCode = 0;
-                }
-            }
-
-            if (errorCode != -1) {
-                continue;
-            }
-
             boolean giveReward = unique || ((reward.probability / 100) <= RANDOM.nextDouble());
 
             if (giveReward && !receivedReward) {
@@ -220,6 +203,12 @@ public class WiredActionGiveReward extends WiredActionItem {
                                 playerEntity.getPlayer().getSession().send(new AlertMessageComposer(
                                         Locale.getOrDefault("wired.reward.duckets", "You received %s ducket(s)!").replace("%s", amount + "")));
                                 break;
+
+                            case REWARD_SEASONAL:
+                                playerEntity.getPlayer().getData().increaseSeasonalPoints(amount);
+                                playerEntity.getPlayer().getSession().send(new AlertMessageComposer(
+                                        Locale.getOrDefault("wired.reward.seasonal", "You received %s seasonal(s)!").replace("%s", amount + "")));
+                                break;
                         }
 
                         playerEntity.getPlayer().getData().save();
@@ -248,6 +237,8 @@ public class WiredActionGiveReward extends WiredActionItem {
 
                             playerEntity.getPlayer().getSession().send(new UpdateInventoryMessageComposer());
                             playerEntity.getPlayer().getSession().send(new UnseenItemsMessageComposer(Sets.newHashSet(playerItem)));
+
+                            playerEntity.getPlayer().getSession().send(new WiredRewardMessageComposer(6));
                         }
                     }
                 }
@@ -256,15 +247,9 @@ public class WiredActionGiveReward extends WiredActionItem {
             }
         }
 
-        if(errorCode != -1) {
-            playerEntity.getPlayer().getSession().send(new WiredRewardMessageComposer(errorCode));
-            return;
-        }
 
         if (!receivedReward) {
             playerEntity.getPlayer().getSession().send(new WiredRewardMessageComposer(4));
-        } else {
-            playerEntity.getPlayer().getSession().send(new WiredRewardMessageComposer(6));
         }
 
         if (rewardTimings.get(this.getId()).containsKey(playerEntity.getPlayerId())) {
@@ -272,10 +257,11 @@ public class WiredActionGiveReward extends WiredActionItem {
         } else {
             rewardTimings.get(this.getId()).put(playerEntity.getPlayerId(), Comet.getTime());
         }
+        return false;
     }
 
     private boolean isCurrencyReward(final String key) {
-        return (key.equals(REWARD_COINS) || key.equals(REWARD_DIAMONDS) || key.equals(REWARD_DUCKETS));
+        return (key.equals(REWARD_COINS) || key.equals(REWARD_DIAMONDS) || key.equals(REWARD_DUCKETS) || key.equals(REWARD_SEASONAL));
     }
 
     @Override

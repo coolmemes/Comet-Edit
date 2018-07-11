@@ -1,6 +1,5 @@
 package com.cometproject.server.game.rooms.objects.entities.types.ai;
 
-import com.cometproject.server.game.bots.BotMode;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntityStatus;
 import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
@@ -53,7 +52,7 @@ public abstract class AbstractBotAI implements BotAI {
                     return;
                 }
 
-                if (botEntity.getData().getMode() == BotMode.RELAXED) {
+                if (botEntity.getData().getMode().equals("relaxed")) {
                     newStep = false;
                 }
             }
@@ -99,7 +98,6 @@ public abstract class AbstractBotAI implements BotAI {
 
     }
 
-    @Override
     public void onReachedTile(RoomTile tile) {
         final PlayerEntity closestEntity = this.entity.nearestPlayerEntity();
 
@@ -112,6 +110,7 @@ public abstract class AbstractBotAI implements BotAI {
             }
         }
     }
+
 
     public void walkNow() {
         this.walkNow = true;
@@ -127,6 +126,8 @@ public abstract class AbstractBotAI implements BotAI {
 
         this.ticksUntilComplete = realTime;
     }
+
+
 
     @Override
     public void say(String message) {

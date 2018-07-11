@@ -55,7 +55,7 @@ public class AchievementDao {
     }
 
     private static Achievement create(ResultSet resultSet) throws SQLException {
-        return new Achievement(resultSet.getInt("level"), resultSet.getInt("reward_activity_points"), resultSet.getInt("reward_achievement_points"), resultSet.getInt("progress_requirement"));
+        return new Achievement(resultSet.getInt("level"), resultSet.getInt("reward_activity_points"), resultSet.getInt("reward_achievement_points"), resultSet.getInt("progress_requirement"), resultSet.getInt("game_id"));
     }
 
 }

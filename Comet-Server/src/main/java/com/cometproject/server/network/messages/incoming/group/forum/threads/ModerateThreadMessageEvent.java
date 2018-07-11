@@ -44,7 +44,7 @@ public class ModerateThreadMessageEvent implements Event {
         }
 
         forumThread.setState(state);
-        GroupForumThreadDao.saveMessageState(forumThread.getId(), state, client.getPlayer().getId(), client.getPlayer().getData().getUsername());
+        GroupForumThreadDao.saveMessageState(forumThread.getId(), state);
 
         client.send(new NotificationMessageComposer(state == 20 ? "forums.thread.hidden" : "forums.thread.restored"));
         client.send(new GroupForumUpdateThreadMessageComposer(groupId, forumThread));

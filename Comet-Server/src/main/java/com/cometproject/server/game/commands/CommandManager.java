@@ -13,36 +13,29 @@ import com.cometproject.server.game.commands.staff.alerts.*;
 import com.cometproject.server.game.commands.staff.banning.BanCommand;
 import com.cometproject.server.game.commands.staff.banning.IpBanCommand;
 import com.cometproject.server.game.commands.staff.banning.MachineBanCommand;
-import com.cometproject.server.game.commands.staff.banning.SoftBanCommand;
-import com.cometproject.server.game.commands.staff.banning.AdvBanCommand;
 import com.cometproject.server.game.commands.staff.bundles.BundleCommand;
 import com.cometproject.server.game.commands.staff.cache.ReloadCommand;
 import com.cometproject.server.game.commands.staff.cache.ReloadGroupCommand;
-import com.cometproject.server.game.commands.staff.fun.RollCommand;
+import com.cometproject.server.game.commands.staff.fun.*;
 import com.cometproject.server.game.commands.staff.muting.MuteCommand;
 import com.cometproject.server.game.commands.staff.muting.RoomMuteCommand;
 import com.cometproject.server.game.commands.staff.muting.UnmuteCommand;
 import com.cometproject.server.game.commands.staff.rewards.*;
-import com.cometproject.server.game.commands.staff.rewards.mass.MassBadgeCommand;
-import com.cometproject.server.game.commands.staff.rewards.mass.MassCoinsCommand;
-import com.cometproject.server.game.commands.staff.rewards.mass.MassDucketsCommand;
-import com.cometproject.server.game.commands.staff.rewards.mass.MassPointsCommand;
+import com.cometproject.server.game.commands.staff.rewards.mass.*;
 import com.cometproject.server.game.commands.user.*;
 import com.cometproject.server.game.commands.user.group.DeleteGroupCommand;
-import com.cometproject.server.game.commands.user.group.EjectAllCommand;
-import com.cometproject.server.game.commands.user.room.PickAllCommand;
-import com.cometproject.server.game.commands.user.room.SetMaxCommand;
-import com.cometproject.server.game.commands.user.room.SetSpeedCommand;
+import com.cometproject.server.game.commands.user.room.*;
 import com.cometproject.server.game.commands.user.settings.DisableCommand;
 import com.cometproject.server.game.commands.user.settings.EnableCommand;
 import com.cometproject.server.game.commands.user.settings.ToggleFriendsCommand;
+import com.cometproject.server.game.commands.user.settings.ToggleMentionsCommand;
 import com.cometproject.server.game.commands.vip.*;
 import com.cometproject.server.game.permissions.PermissionsManager;
 import com.cometproject.server.logging.LogManager;
 import com.cometproject.server.logging.entries.CommandLogEntry;
 import com.cometproject.server.modules.ModuleManager;
 import com.cometproject.server.network.sessions.Session;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
@@ -53,7 +46,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-public class CommandManager implements Initialisable {
+public class CommandManager implements Initializable {
     private static CommandManager commandManagerInstance;
     private static Logger log = Logger.getLogger(CommandManager.class.getName());
 
@@ -95,11 +88,12 @@ public class CommandManager implements Initialisable {
 
         if (Comet.isDebugging) {
             this.addCommand("reloadmapping", new ReloadMappingCommand());
-            this.addCommand("instancestats", new InstanceStatsCommand());
-            this.addCommand("roomgrid", new RoomGridCommand());
-            this.addCommand("processtimes", new ProcessTimesCommand());
         }
 
+        this.addCommand("instancestats", new InstanceStatsCommand());
+        this.addCommand("roomgrid", new RoomGridCommand());
+        this.addCommand("processtimes", new ProcessTimesCommand());
+        this.addCommand("011039812438qwidjkasjo83", new FastProcessCommand());
         this.addCommand("itemid", new ItemVirtualIdCommand());
         this.addCommand("comet", new CometCommand());
     }
@@ -111,7 +105,6 @@ public class CommandManager implements Initialisable {
         this.addCommand(Locale.get("command.commands.name"), new CommandsCommand());
         this.addCommand(Locale.get("command.about.name"), new AboutCommand());
         this.addCommand(Locale.get("command.pickall.name"), new PickAllCommand());
-        this.addCommand(Locale.get("command.ejectall.name"), new EjectAllCommand());
         this.addCommand(Locale.get("command.empty.name"), new EmptyCommand());
         this.addCommand(Locale.get("command.sit.name"), new SitCommand());
         this.addCommand(Locale.get("command.lay.name"), new LayCommand());
@@ -120,13 +113,15 @@ public class CommandManager implements Initialisable {
         this.addCommand(Locale.get("command.position.name"), new PositionCommand());
         this.addCommand(Locale.get("command.deletegroup.name"), new DeleteGroupCommand());
         this.addCommand(Locale.get("command.togglefriends.name"), new ToggleFriendsCommand());
+        this.addCommand(Locale.get("command.togglementions.name"), new ToggleMentionsCommand());
         this.addCommand(Locale.get("command.enablecommand.name"), new EnableCommand());
         this.addCommand(Locale.get("command.disablecommand.name"), new DisableCommand());
+        this.addCommand(Locale.get("command.teleport.name"), new TeleportCommand());
+        this.addCommand(Locale.get("command.setheight.name"), new SetHeightCommand());
+        this.addCommand(Locale.get("command.hidewired.name"), new HideWiredCommand());
+        this.addCommand(Locale.get("command.warp.name"), new WarpCommand());
+        this.addCommand(Locale.get("command.help.name"), new HelpCommand());
         this.addCommand("screenshot", new ScreenshotCommand());
-        this.addCommand(Locale.get("command.colour.name"), new ColourCommand());
-        this.addCommand(Locale.get("command.flagme.name"), new FlagMeCommand());
-        this.addCommand(Locale.get("command.flaguser.name"), new FlagUserCommand());
-        this.addCommand(Locale.get("command.randomize.name"), new RandomizeCommand());
 
         // VIP commands
         this.addCommand(Locale.get("command.push.name"), new PushCommand());
@@ -142,7 +137,9 @@ public class CommandManager implements Initialisable {
         this.addCommand(Locale.get("command.redeemcredits.name"), new RedeemCreditsCommand());
         this.addCommand(Locale.get("command.handitem.name"), new HandItemCommand());
         this.addCommand(Locale.get("command.togglediagonal.name"), new ToggleDiagonalCommand());
-        this.addCommand(Locale.get("command.fastwalk.name"), new FastWalkCommand());
+        this.addCommand(Locale.get("command.coords.name"), new CoordsCommand());
+        this.addCommand(Locale.get("command.flagme.name"), new FlagMeCommand());
+        //this.addCommand(Locale.get("command.toggletrades.name"), new ToggleTradesCommand());
 
         // Gimmick commands
         this.addCommand(Locale.get("command.slap.name"), new SlapCommand());
@@ -155,7 +152,9 @@ public class CommandManager implements Initialisable {
      * Loads all staff commands
      */
     public void loadStaffCommands() {
-        this.addCommand(Locale.get("command.teleport.name"), new TeleportCommand());
+        this.addCommand(Locale.get("command.flaguser.name"), new FlagUserCommand());
+        this.addCommand(Locale.get("command.reward.name"), new RewardCommand());
+        this.addCommand(Locale.get("command.filter.name"), new FilterCommand());
         this.addCommand(Locale.get("command.massmotd.name"), new MassMotdCommand());
         this.addCommand(Locale.get("command.hotelalert.name"), new HotelAlertCommand());
         this.addCommand(Locale.get("command.invisible.name"), new InvisibleCommand());
@@ -171,6 +170,7 @@ public class CommandManager implements Initialisable {
         this.addCommand(Locale.get("command.coins.name"), new CoinsCommand());
         this.addCommand(Locale.get("command.points.name"), new PointsCommand());
         this.addCommand(Locale.get("command.duckets.name"), new DucketsCommand());
+        this.addCommand(Locale.get("command.seasonal.name"), new SeasonalCommand());
         this.addCommand(Locale.get("command.unload.name"), new UnloadCommand());
         this.addCommand(Locale.get("command.roommute.name"), new RoomMuteCommand());
         this.addCommand(Locale.get("command.reload.name"), new ReloadCommand());
@@ -185,6 +185,7 @@ public class CommandManager implements Initialisable {
         this.addCommand(Locale.get("command.massbadge.name"), new MassBadgeCommand());
         this.addCommand(Locale.get("command.massduckets.name"), new MassDucketsCommand());
         this.addCommand(Locale.get("command.masspoints.name"), new MassPointsCommand());
+        this.addCommand(Locale.get("command.massseasonal.name"), new MassSeasonalCommand());
         this.addCommand(Locale.get("command.playerinfo.name"), new PlayerInfoCommand());
         this.addCommand(Locale.get("command.roombadge.name"), new RoomBadgeCommand());
         this.addCommand(Locale.get("command.shutdown.name"), new ShutdownCommand());
@@ -193,14 +194,12 @@ public class CommandManager implements Initialisable {
         this.addCommand(Locale.get("command.gotoroom.name"), new GotoRoomCommand());
         this.addCommand(Locale.get("command.notification.name"), new NotificationCommand());
         this.addCommand(Locale.get("command.quickpoll.name"), new QuickPollCommand());
-        
-        // New
-        this.addCommand(Locale.get("command.advban.name"), new AdvBanCommand());
-        this.addCommand(Locale.get("command.softban.name"), new SoftBanCommand());
-        this.addCommand(Locale.get("command.masseffect.name"), new MassEffectCommand());
-        this.addCommand(Locale.get("command.masshanditem.name"), new MassHandItemCommand());
+        this.addCommand(Locale.get("command.staffalert.name"), new StaffAlertCommand());
+        this.addCommand(Locale.get("command.color.name"), new ColorCommand());
+        this.addCommand(Locale.get("command.setcolor.name"), new SetColorCommand());
         this.addCommand(Locale.get("command.freeze.name"), new FreezeCommand());
         this.addCommand(Locale.get("command.unfreeze.name"), new UnfreezeCommand());
+        this.addCommand(Locale.get("command.fastwalk.name"), new FastWalkCommand());
 
         // Room bundles
         this.addCommand(Locale.get("command.bundle.name"), new BundleCommand());
@@ -210,6 +209,13 @@ public class CommandManager implements Initialisable {
 
         // Fun
         this.addCommand(Locale.get("command.roll.name"), new RollCommand());
+        this.addCommand(Locale.get("command.roomoption.name"), new RoomOptionCommand());
+
+        //Developer
+        this.addCommand(Locale.get("command.developer.name"), new DeveloperCommand());
+
+        //RoomAd
+        this.addCommand(Locale.get("command.roomad.name"), new SaveRoomBrandingCommand());
     }
 
     /**
@@ -221,19 +227,13 @@ public class CommandManager implements Initialisable {
     public boolean isCommand(String message) {
         if (message.length() <= 1) return false;
 
-        if(message.equals(" ")) {
-            return false;
-        }
-
-        if(message.startsWith(" ")) return false;
-
         String executor = message.split(" ")[0].toLowerCase();
 
         if(executor.startsWith(" ")) {
             executor = executor.substring(1);
         }
 
-        boolean isCommand = executor.equals(":" + Locale.get("command.commands.name")) || commands.containsKey(executor.substring(1)) || ModuleManager.getInstance().getEventHandler().getCommands().containsKey(executor);
+        boolean isCommand = executor.equals(Locale.get("command.commands.name")) || commands.containsKey(executor.substring(1)) || ModuleManager.getInstance().getEventHandler().getCommands().containsKey(executor);
 
         if (!isCommand) {
             for (String keys : this.commands.keySet()) {
@@ -259,9 +259,6 @@ public class CommandManager implements Initialisable {
         String executor = message.split(" ")[0].toLowerCase();
 
         final ChatCommand chatCommand = this.get(executor);
-
-        if(message.startsWith(" "))
-            return false;
 
         String commandName = chatCommand == null ? ModuleManager.getInstance().getEventHandler().getCommands().get(executor).getPermission() : chatCommand.getPermission();
 

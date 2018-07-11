@@ -109,8 +109,11 @@ public class ItemPathfinder extends Pathfinder {
         }
 
         if (tile.getMovementNode() == RoomEntityMovementNode.CLOSED || (tile.getMovementNode() == RoomEntityMovementNode.END_OF_ROUTE && !lastStep)) {
+
             return false;
         }
+
+
 
         final double fromHeight = roomFloorObject.getRoom().getMapping().getStepHeight(from);
         final double toHeight = roomFloorObject.getRoom().getMapping().getStepHeight(to);

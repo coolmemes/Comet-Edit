@@ -2,15 +2,21 @@ package com.cometproject.server.network.messages.incoming.messenger;
 
 import com.cometproject.server.boot.Comet;
 import com.cometproject.server.config.Locale;
+import com.cometproject.server.game.moderation.ModerationManager;
 import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.game.rooms.filter.FilterResult;
+import com.cometproject.server.game.rooms.types.components.types.ChatMessage;
+import com.cometproject.server.network.NetworkManager;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.messenger.InviteFriendMessageComposer;
 import com.cometproject.server.network.messages.outgoing.notification.AdvancedAlertMessageComposer;
+import com.cometproject.server.network.messages.outgoing.notification.NotificationMessageComposer;
 import com.cometproject.server.protocol.messages.MessageEvent;
 import com.cometproject.server.network.sessions.Session;
+import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 
@@ -18,15 +24,6 @@ public class InviteFriendsMessageEvent implements Event {
     @Override
     public void handle(Session client, MessageEvent msg) throws Exception {
         final long time = System.currentTimeMillis();
-
-        final int timeMutedExpire = client.getPlayer().getData().getTimeMuted() - (int) Comet.getTime();
-
-        if (client.getPlayer().getData().getTimeMuted() != 0) {
-            if (client.getPlayer().getData().getTimeMuted() > (int) Comet.getTime()) {
-                client.getPlayer().getSession().send(new AdvancedAlertMessageComposer(Locale.getOrDefault("command.mute.muted", "You are muted for violating the rules! Your mute will expire in %timeleft% seconds").replace("%timeleft%", timeMutedExpire + "")));
-                return;
-            }
-        }
 
         if (!client.getPlayer().getPermissions().getRank().floodBypass()) {
             if (time - client.getPlayer().getMessengerLastMessageTime() < 750) {
@@ -59,11 +56,22 @@ public class InviteFriendsMessageEvent implements Event {
             FilterResult filterResult = RoomManager.getInstance().getFilter().filter(message);
 
             if (filterResult.isBlocked()) {
-                client.send(new AdvancedAlertMessageComposer(Locale.get("game.message.blocked").replace("%s", filterResult.getMessage())));
+                client.getPlayer().sendBubble(Locale.get("command.filter.icon"),Locale.get("filter.prohibited.message"));
+                final List<ChatMessage> chatMessage = Lists.newArrayList();
+                chatMessage.add(new ChatMessage(client.getPlayer().getId(), message));
+                ModerationManager.getInstance().createTicket(client.getPlayer().getId(), message, 22, client.getPlayer().getId(), Comet.getTimeInt(), client.getPlayer().getEntity().getRoom().getId(), chatMessage);
+
+                Date date = new Date();
+                NetworkManager.getInstance().getSessions().broadcastToModerators(new NotificationMessageComposer(Locale.get("spam.notification.image"),
+                Locale.get("spam.notification.message").replace("%date%", String.valueOf(date.getHours()) + ":" + String.valueOf(date.getMinutes()) + ":" + String.valueOf(date.getSeconds())).replace("%username%", client.getPlayer().getData().getUsername()).replace("%type%", Locale.get("spam.type.invite")),
+                ""));
                 return;
+
             } else if (filterResult.wasModified()) {
                 message = filterResult.getMessage();
             }
+
+            message = client.getPlayer().getEntity().getRoom().getFilter().filter(client.getPlayer().getEntity(), message);
         }
 
         client.getPlayer().getMessenger().broadcast(friends, new InviteFriendMessageComposer(message, client.getPlayer().getId()));

@@ -12,10 +12,10 @@ public class TalkMessageComposer extends MessageComposer {
     private final ChatEmotion emoticon;
     private final int colour;
 
-    public TalkMessageComposer(final int playerId, final String message, final ChatEmotion emoticion, final int colour) {
+    public TalkMessageComposer(final int playerId, final String message, final ChatEmotion emoticon, final int colour) {
         this.playerId = playerId;
         this.message = message;
-        this.emoticon = emoticion;
+        this.emoticon = emoticon;
         this.colour = colour;
     }
 

@@ -36,6 +36,16 @@ public abstract class MassCurrencyCommand extends ChatCommand {
                     ));
 
                     session.send(session.getPlayer().composeCurrenciesBalance());
+
+                } else if (this instanceof MassSeasonalCommand) {
+                    session.getPlayer().getData().increaseSeasonalPoints(amount);
+
+                    session.send(new AdvancedAlertMessageComposer(
+                            Locale.get("command.seasonal.successtitle"),
+                            Locale.get("command.seasonal.successmessage").replace("%amount%", String.valueOf(amount))
+                    ));
+
+                    session.send(session.getPlayer().composeCurrenciesBalance());
                 }
 
                 session.getPlayer().getData().save();

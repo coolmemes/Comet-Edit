@@ -1,14 +1,13 @@
 package com.cometproject.server.game.players;
 
 import com.cometproject.server.boot.Comet;
-import com.cometproject.server.config.Configuration;
 import com.cometproject.server.game.players.data.PlayerAvatar;
 import com.cometproject.server.game.players.data.PlayerData;
 import com.cometproject.server.game.players.login.PlayerLoginRequest;
 import com.cometproject.server.network.NetworkManager;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.server.storage.queries.player.PlayerDao;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import com.google.common.collect.Lists;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
@@ -23,23 +22,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-public class PlayerManager implements Initialisable {
+public class PlayerManager implements Initializable {
     private static PlayerManager playerManagerInstance;
     private static Logger log = Logger.getLogger(PlayerManager.class.getName());
 
     private Map<Integer, Integer> playerIdToSessionId;
     private Map<String, Integer> playerUsernameToPlayerId;
-
-    private Map<String, List<Integer>> ipAddressToPlayerIds;
-
     private Map<String, Integer> ssoTicketToPlayerId;
 
-    private Map<Integer, String> playerIdToUsername;
+    private Map<String, List<Integer>> ipAddressToPlayerIds;
 
     private CacheManager cacheManager;
 
     private Cache playerAvatarCache;
-
     private Cache playerDataCache;
     private ExecutorService playerLoginService;
 
@@ -54,10 +49,10 @@ public class PlayerManager implements Initialisable {
         this.ipAddressToPlayerIds = new ConcurrentHashMap<>();
         this.ssoTicketToPlayerId = new ConcurrentHashMap<>();
 
-        this.playerLoginService = Executors.newFixedThreadPool(16);// TODO: configure this.
+        this.playerLoginService = Executors.newFixedThreadPool(2);// TODO: configure this.
 
         // Configure player cache
-        if ((boolean) Configuration.currentConfig().getOrDefault("comet.cache.players.enabled", true)) {
+        if ((boolean) Comet.getServer().getConfig().getOrDefault("comet.cache.players.enabled", true)) {
             log.info("Initializing Player cache");
 
             final int oneDay = 24 * 60 * 60;
@@ -127,6 +122,32 @@ public class PlayerManager implements Initialisable {
         }
 
         return playerAvatar;
+    }
+
+    public PlayerData getDataByPlayerUsername(String playerUsername) {
+        if (this.isOnline(playerUsername)) {
+            Session session = NetworkManager.getInstance().getSessions().getByPlayerUsername(playerUsername);
+
+            if (session != null && session.getPlayer() != null && session.getPlayer().getData() != null) {
+                return session.getPlayer().getData();
+            }
+        }
+
+        if (this.playerDataCache != null) {
+            Element cachedElement = this.playerDataCache.get(playerUsername);
+
+            if (cachedElement != null && cachedElement.getObjectValue() != null) {
+                return (PlayerData) cachedElement.getObjectValue();
+            }
+        }
+
+        PlayerData playerData = PlayerDao.getDataByUsername(playerUsername);
+
+        if (playerData != null && this.playerDataCache != null) {
+            this.playerDataCache.put(new Element(playerUsername, playerData));
+        }
+
+        return playerData;
     }
 
     public PlayerData getDataByPlayerId(int playerId) {
@@ -203,6 +224,13 @@ public class PlayerManager implements Initialisable {
         this.playerUsernameToPlayerId.remove(username.toLowerCase());
     }
 
+    public void updateUsernameCache(final String oldName, final String newName) {
+        final int playerId = this.getPlayerIdByUsername(oldName.toLowerCase());
+
+        this.playerUsernameToPlayerId.remove(oldName.toLowerCase());
+        this.playerUsernameToPlayerId.put(newName.toLowerCase(), playerId);
+    }
+
     public int getPlayerIdByUsername(String username) {
         if (this.playerUsernameToPlayerId.containsKey(username.toLowerCase())) {
             return this.playerUsernameToPlayerId.get(username.toLowerCase());
@@ -219,11 +247,8 @@ public class PlayerManager implements Initialisable {
         return -1;
     }
 
-    public void updateUsernameCache(final String oldName, final String newName) {
-        final int playerId = this.getPlayerIdByUsername(oldName.toLowerCase());
-
-        this.playerUsernameToPlayerId.remove(oldName.toLowerCase());
-        this.playerUsernameToPlayerId.put(newName.toLowerCase(), playerId);
+    public Map<String, Integer> getSsoTicketToPlayerId() {
+        return ssoTicketToPlayerId;
     }
 
     public List<Integer> getPlayerIdsByIpAddress(String ipAddress) {
@@ -240,17 +265,5 @@ public class PlayerManager implements Initialisable {
 
     public int size() {
         return this.playerIdToSessionId.size();
-    }
-
-    public Map<String, Integer> getSsoTicketToPlayerId() {
-        return ssoTicketToPlayerId;
-    }
-
-    public ExecutorService getPlayerLoadExecutionService() {
-        return playerLoginService;
-    }
-
-    public CacheManager getCacheManager() {
-        return cacheManager;
     }
 }

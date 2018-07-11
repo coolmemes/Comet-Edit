@@ -5,8 +5,8 @@ import com.cometproject.api.events.EventHandler;
 import com.cometproject.api.modules.BaseModule;
 import com.cometproject.api.server.IGameService;
 import com.cometproject.server.modules.events.EventHandlerService;
-import com.cometproject.server.utilities.Initialisable;
-import com.cometproject.server.utilities.JsonUtil;
+import com.cometproject.server.utilities.Initializable;
+import com.cometproject.server.utilities.JsonFactory;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import org.apache.log4j.Logger;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ModuleManager implements Initialisable {
+public class ModuleManager implements Initializable {
     private static ModuleManager moduleManagerInstance;
     private static final Logger log = Logger.getLogger(ModuleManager.class.getName());
 
@@ -51,6 +51,7 @@ public class ModuleManager implements Initialisable {
         }
 
         ModuleManager.getInstance().getEventHandler().initialize();
+
 
         for (String moduleName : this.findModules()) {
             try {
@@ -87,7 +88,7 @@ public class ModuleManager implements Initialisable {
 
         if (configJsonLocation == null) throw new Exception("plugin.json does not exist");
 
-        final ModuleConfig moduleConfig = JsonUtil.getInstance().fromJson(Resources.toString(configJsonLocation, Charsets.UTF_8), ModuleConfig.class);
+        final ModuleConfig moduleConfig = JsonFactory.getInstance().fromJson(Resources.toString(configJsonLocation, Charsets.UTF_8), ModuleConfig.class);
 
         if (this.modules.containsKey(moduleConfig.getName())) {
             if (!this.modules.get(moduleConfig.getName()).getConfig().getVersion().equals(moduleConfig.getVersion())) {

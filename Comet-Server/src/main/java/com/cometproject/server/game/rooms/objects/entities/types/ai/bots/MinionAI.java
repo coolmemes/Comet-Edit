@@ -1,12 +1,12 @@
 package com.cometproject.server.game.rooms.objects.entities.types.ai.bots;
 
-import com.cometproject.server.game.bots.BotMode;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.RoomEntityStatus;
 import com.cometproject.server.game.rooms.objects.entities.types.BotEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.ai.AbstractBotAI;
 import com.cometproject.server.game.rooms.types.misc.ChatEmotion;
+import com.cometproject.server.network.messages.outgoing.room.avatar.ApplyEffectMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.DanceMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.TalkMessageComposer;
 import com.cometproject.server.utilities.RandomInteger;
@@ -35,18 +35,14 @@ public class MinionAI extends AbstractBotAI {
             entity.addStatus(RoomEntityStatus.SIT, "0.5");
             entity.markNeedsUpdate();
 
-            entity.getData().setMode(BotMode.RELAXED);
-        });
-
-        put("minions relax", (entity) -> {
-            entity.getData().setMode(BotMode.RELAXED);
+            entity.getData().setMode("relaxed");
         });
 
         put("minions stand", (entity) -> {
             entity.removeStatus(RoomEntityStatus.SIT);
             entity.markNeedsUpdate();
 
-            entity.getData().setMode(BotMode.DEFAULT);
+            entity.getData().setMode("default");
         });
 
         put("minions follow", (entity) -> {
@@ -55,6 +51,14 @@ public class MinionAI extends AbstractBotAI {
             if(playerEntity != null) {
                 playerEntity.getFollowingEntities().add(entity);
             }
+        });
+
+        put("minions effect", (entity) -> {
+            PlayerEntity playerEntity = entity.getRoom().getEntities().getEntityByPlayerId(entity.getData().getOwnerId());
+
+            int effectId = playerEntity.getCurrentEffect().getEffectId();
+
+            entity.getRoom().getEntities().broadcastMessage(new ApplyEffectMessageComposer(entity.getId(), effectId));
         });
     }};
 
@@ -72,7 +76,10 @@ public class MinionAI extends AbstractBotAI {
 
         if (speechCommands.containsKey(message.toLowerCase())) {
             speechCommands.get(message.toLowerCase()).accept(((BotEntity) this.getEntity()));
-        } else {
+            return false;
+        } else if (message.startsWith("BOTS")) {
+
+            message = message.replace("BOTS", "");
             this.getEntity().getRoom().getEntities().broadcastMessage(new TalkMessageComposer(this.getEntity().getId(), message, ChatEmotion.NONE, 2));
         }
 

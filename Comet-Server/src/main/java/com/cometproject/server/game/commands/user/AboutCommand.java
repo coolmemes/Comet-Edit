@@ -1,14 +1,16 @@
 package com.cometproject.server.game.commands.user;
 
 import com.cometproject.server.boot.Comet;
-import com.cometproject.server.config.CometSettings;
+import com.cometproject.api.config.CometSettings;
 import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.GameCycle;
 import com.cometproject.server.game.commands.ChatCommand;
 import com.cometproject.server.network.messages.outgoing.notification.AdvancedAlertMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 import com.cometproject.api.stats.CometStats;
+import com.cometproject.server.utilities.CometRuntime;
 
+import java.lang.management.ManagementFactory;
 import java.text.NumberFormat;
 
 
@@ -25,44 +27,28 @@ public class AboutCommand extends ChatCommand {
         boolean aboutStats = client.getPlayer().getPermissions().getRank().aboutStats();
 
         if (CometSettings.aboutShowRoomsActive || CometSettings.aboutShowRoomsActive || CometSettings.aboutShowUptime || aboutDetailed) {
-            about.append("<b>Server Status</b><br>");
-
+            about.append("Propulsé par Comet Server [HBG EDITION] - " + Comet.getBuild()+ "<br><br>");
             if (CometSettings.aboutShowPlayersOnline || aboutDetailed)
-                about.append("Users online: " + format.format(cometStats.getPlayers()) + "<br>");
+                about.append("<b>Joueurs en ligne: </b>" + format.format(cometStats.getPlayers()) + "/" + GameCycle.getInstance().getCurrentOnlineRecord() + "<br>");
 
             if (CometSettings.aboutShowRoomsActive || aboutDetailed)
-                about.append("Active rooms: " + format.format(cometStats.getRooms()) + "<br>");
-
+                about.append("<b>Apparts actifs: </b>" + format.format(cometStats.getRooms()) + "<br>");
             if (CometSettings.aboutShowUptime || aboutDetailed)
-                about.append("Uptime: " + cometStats.getUptime() + "<br>");
-
-            about.append("Client version: " + Session.CLIENT_VERSION + "<br>");
+                about.append("<b>En ligne depuis: </b>" + cometStats.getUptime() + "<br>");
         }
 
-        // This will be visible to developers on the manager, no need to display it to the end-user.
-        /*if (client.getPlayer().getPermissions().hasPermission("about_detailed")) {
+        if (aboutStats) {
+            about.append("<br><br><b>Hotel Stats</b><br>");
+            about.append("Record: " + GameCycle.getInstance().getOnlineRecord() + "<br>");
             about.append("<br><b>Server Info</b><br>");
             about.append("Allocated memory: " + format.format(cometStats.getAllocatedMemory()) + "MB<br>");
             about.append("Used memory: " + format.format(cometStats.getUsedMemory()) + "MB<br>");
-
             about.append("Process ID: " + CometRuntime.processId + "<br>");
             about.append("OS: " + cometStats.getOperatingSystem() + "<br>");
             about.append("CPU cores:  " + cometStats.getCpuCores() + "<br>");
             about.append("Threads:  " + ManagementFactory.getThreadMXBean().getThreadCount() + "<br>");
-        }*/
-
-        if (aboutStats) {
-            about.append("<br><br><b>Hotel Stats</b><br>");
-            about.append("Online record: " + GameCycle.getInstance().getOnlineRecord() + "<br>");
-            about.append("Record since last reboot: " + GameCycle.getInstance().getCurrentOnlineRecord() + "<br><br>");
         }
-
-
-        client.send(new AdvancedAlertMessageComposer(
-                "Comet Server - " + Comet.getBuild(),
-                about.toString(),
-                "www.cometproject.com", "https://www.cometproject.com", CometSettings.aboutImg
-        ));
+        client.send(new AdvancedAlertMessageComposer("Information sur le serveur", about.toString(), "", "", CometSettings.aboutImg));
     }
 
     @Override

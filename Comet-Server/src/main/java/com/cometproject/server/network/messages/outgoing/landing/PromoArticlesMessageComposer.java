@@ -29,8 +29,8 @@ public class PromoArticlesMessageComposer extends MessageComposer {
             msg.writeString(article.getTitle());
             msg.writeString(article.getMessage());
             msg.writeString(article.getButtonText());
-            msg.writeInt(0); // Button Type
-            msg.writeString(article.getButtonLink());
+            msg.writeInt(article.getButtonLink().startsWith("event:") ? 1 : 0); // Button Type
+            msg.writeString(article.getButtonLink().replace("event:", ""));
             msg.writeString(article.getImagePath());
         }
     }

@@ -1,44 +1,36 @@
 package com.cometproject.server.game.rooms;
 
-import com.cometproject.api.game.rooms.settings.RoomAccessType;
 import com.cometproject.api.game.rooms.settings.RoomTradeState;
 import com.cometproject.server.boot.Comet;
-import com.cometproject.server.config.Configuration;
 import com.cometproject.server.game.players.types.Player;
 import com.cometproject.server.game.rooms.filter.WordFilter;
 import com.cometproject.server.game.rooms.models.CustomFloorMapData;
 import com.cometproject.server.game.rooms.models.types.StaticRoomModel;
-import com.cometproject.server.game.rooms.objects.items.types.floor.wired.WiredUtil;
 import com.cometproject.server.game.rooms.types.Room;
 import com.cometproject.server.game.rooms.types.RoomData;
 import com.cometproject.server.game.rooms.types.RoomPromotion;
-import com.cometproject.server.game.rooms.types.RoomReloadListener;
 import com.cometproject.server.game.rooms.types.misc.ChatEmotionsManager;
 import com.cometproject.server.network.messages.outgoing.room.events.RoomPromotionMessageComposer;
 import com.cometproject.server.network.sessions.Session;
-import com.cometproject.server.storage.cache.CacheManager;
-import com.cometproject.server.storage.cache.objects.RoomDataObject;
 import com.cometproject.server.storage.queries.rooms.RoomDao;
-import com.cometproject.server.utilities.Initialisable;
-import com.google.common.collect.Lists;
-import org.apache.commons.collections4.ListUtils;
-import org.apache.commons.fileupload.util.Streams;
+import com.cometproject.server.utilities.Initializable;
 import org.apache.log4j.Logger;
 import org.apache.solr.util.ConcurrentLRUCache;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.BiConsumer;
 
 
-public class RoomManager implements Initialisable {
+public class RoomManager implements Initializable {
     private static RoomManager roomManagerInstance;
     public static final Logger log = Logger.getLogger(RoomManager.class.getName());
 
-    public static final int LRU_MAX_ENTRIES = Integer.parseInt(Configuration.currentConfig().getProperty("comet.game.rooms.data.max"));
-    public static final int LRU_MAX_LOWER_WATERMARK = Integer.parseInt(Configuration.currentConfig().getProperty("comet.game.rooms.data.lowerWatermark"));
+    public static final int LRU_MAX_ENTRIES = Integer.parseInt(Comet.getServer().getConfig().getProperty("comet.game.rooms.data.max"));
+    public static final int LRU_MAX_LOWER_WATERMARK = Integer.parseInt(Comet.getServer().getConfig().getProperty("comet.game.rooms.data.lowerWatermark"));
 
     private ConcurrentLRUCache<Integer, RoomData> roomDataInstances;
 
@@ -55,8 +47,6 @@ public class RoomManager implements Initialisable {
 
     private ExecutorService executorService;
 
-    private Map<Integer, RoomReloadListener> reloadListeners;
-
     public RoomManager() {
 
     }
@@ -68,7 +58,6 @@ public class RoomManager implements Initialisable {
         this.loadedRoomInstances = new ConcurrentHashMap<>();
         this.unloadingRoomInstances = new ConcurrentHashMap<>();
         this.roomPromotions = new ConcurrentHashMap<>();
-        this.reloadListeners = new ConcurrentHashMap<>();
 
         this.emotions = new ChatEmotionsManager();
         this.filterManager = new WordFilter();
@@ -79,15 +68,7 @@ public class RoomManager implements Initialisable {
         this.loadModels();
 
         this.globalCycle.start();
-
-        this.executorService = Executors.newFixedThreadPool(4, r -> {
-            final Thread roomThread = new Thread(r, "Room-Worker-" + UUID.randomUUID());
-
-            roomThread.setUncaughtExceptionHandler((t, e) -> e.printStackTrace());
-
-            return roomThread;
-        });
-
+        this.executorService = Executors.newFixedThreadPool(4);
 
         log.info("RoomManager initialized");
     }
@@ -144,27 +125,15 @@ public class RoomManager implements Initialisable {
             return this.getRoomInstances().get(id);
         }
 
-        Room room = null;
+        RoomData data = this.getRoomData(id);
 
-        if (CacheManager.getInstance().isEnabled() && CacheManager.getInstance().exists("rooms." + id)) {
-            final RoomDataObject roomDataObject = CacheManager.getInstance().get(RoomDataObject.class, "rooms." + id);
-
-            if (roomDataObject != null) {
-                room = new Room(roomDataObject);
-            }
+        if (data == null) {
+            return null;
         }
 
-        if (room == null) {
-            RoomData data = this.getRoomData(id);
+        Room room = new Room(data).load();
 
-            if (data == null) {
-                return null;
-            }
-
-            room = new Room(data);
-        }
-
-        room.load();
+        if (room == null) return null;
 
         this.loadedRoomInstances.put(id, room);
 
@@ -196,22 +165,7 @@ public class RoomManager implements Initialisable {
 
     public void unloadIdleRooms() {
         for (Room room : this.unloadingRoomInstances.values()) {
-            this.executorService.submit(() -> {
-                room.dispose();
-
-                if(room.isReloading()) {
-                    Room newRoom = this.get(room.getId());
-
-                    if(newRoom != null) {
-                        if(this.reloadListeners.containsKey(room.getId())) {
-                            final RoomReloadListener reloadListener = this.reloadListeners.get(newRoom.getId());
-
-                            reloadListener.onReloaded(newRoom);
-                            this.reloadListeners.remove(room.getId());
-                        }
-                    }
-                }
-            });
+            this.executorService.submit(room::dispose);
         }
 
         this.unloadingRoomInstances.clear();
@@ -244,10 +198,6 @@ public class RoomManager implements Initialisable {
         this.getRoomDataInstances().remove(roomId);
     }
 
-    public void addReloadListener(int roomId, RoomReloadListener listener) {
-        this.reloadListeners.put(roomId, listener);
-    }
-
     public void loadRoomsForUser(Player player) {
         player.getRooms().clear();
 
@@ -266,10 +216,6 @@ public class RoomManager implements Initialisable {
         ArrayList<RoomData> rooms = new ArrayList<>();
 
         if (query.equals("tag:")) return rooms;
-
-        if (query.startsWith("roomname:")) {
-            query = query.substring(9);
-        }
 
         List<RoomData> roomSearchResults = RoomDao.getRoomsByQuery(query);
 
@@ -300,42 +246,13 @@ public class RoomManager implements Initialisable {
         return roomId;
     }
 
+
     public int createRoom(String name, String description, String model, int category, int maxVisitors, int tradeState, Session client) {
         int roomId = RoomDao.createRoom(name, model, description, category, maxVisitors, RoomTradeState.valueOf(tradeState), client.getPlayer().getId(), client.getPlayer().getData().getUsername());
 
         this.loadRoomsForUser(client.getPlayer());
 
         return roomId;
-    }
-
-    private List<Integer> getActiveAvailableRooms() {
-        final List<Integer> rooms = new ArrayList<>();
-
-        for(Room activeRoom : this.loadedRoomInstances.values()) {
-            if(!this.unloadingRoomInstances.containsKey(activeRoom.getId())) {
-                final int playerCount = activeRoom.getEntities().playerCount();
-
-                if(playerCount != 0 && playerCount < activeRoom.getData().getMaxUsers() &&
-                        activeRoom.getData().getAccess() == RoomAccessType.OPEN) {
-                    rooms.add(activeRoom.getId());
-                }
-            }
-        }
-
-        return rooms;
-    }
-
-    public int getRandomActiveRoom() {
-        final List<Integer> rooms = this.getActiveAvailableRooms();
-        final Integer roomId = WiredUtil.getRandomElement(rooms);
-
-        rooms.clear();
-
-        if(roomId != null) {
-            return roomId;
-        }
-
-        return -1;
     }
 
     public List<RoomData> getRoomsByCategory(int category) {
@@ -365,9 +282,9 @@ public class RoomManager implements Initialisable {
             this.roomPromotions.put(roomId, roomPromotion);
         }
 
-        final Room room = this.get(roomId);
+        if (this.get(roomId) != null) {
+            Room room = this.get(roomId);
 
-        if (room != null) {
             if (room.getEntities() != null && room.getEntities().realPlayerCount() >= 1) {
                 room.getEntities().broadcastMessage(new RoomPromotionMessageComposer(room.getData(), this.roomPromotions.get(roomId)));
             }
@@ -375,7 +292,11 @@ public class RoomManager implements Initialisable {
     }
 
     public boolean hasPromotion(int roomId) {
-        return this.roomPromotions.containsKey(roomId) && !this.roomPromotions.get(roomId).isExpired();
+        if (this.roomPromotions.containsKey(roomId) && !this.roomPromotions.get(roomId).isExpired()) {
+            return true;
+        }
+
+        return false;
     }
 
     public final ChatEmotionsManager getEmotions() {
@@ -386,7 +307,7 @@ public class RoomManager implements Initialisable {
         return this.loadedRoomInstances;
     }
 
-    private ConcurrentLRUCache<Integer, RoomData> getRoomDataInstances() {
+    public final ConcurrentLRUCache<Integer, RoomData> getRoomDataInstances() {
         return this.roomDataInstances;
     }
 

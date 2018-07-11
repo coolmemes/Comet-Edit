@@ -56,7 +56,7 @@ public final class MessageEvent {
         return this.id;
     }
 
-    private ByteBuf content() {
+    public ByteBuf content() {
         return this.buffer;
     }
 }

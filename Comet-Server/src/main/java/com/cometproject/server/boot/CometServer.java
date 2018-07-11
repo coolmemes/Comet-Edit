@@ -8,11 +8,13 @@ import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.GameCycle;
 import com.cometproject.server.game.achievements.AchievementManager;
 import com.cometproject.server.game.catalog.CatalogManager;
+import com.cometproject.server.game.catalog.recycler.RecycleManager;
 import com.cometproject.server.game.commands.CommandManager;
+import com.cometproject.server.game.gamecenter.GameCenterManager;
 import com.cometproject.server.game.groups.GroupManager;
-import com.cometproject.server.game.guides.GuideManager;
 import com.cometproject.server.game.items.ItemManager;
 import com.cometproject.server.game.landing.LandingManager;
+import com.cometproject.server.game.marketplace.MarketplaceManager;
 import com.cometproject.server.game.moderation.BanManager;
 import com.cometproject.server.game.moderation.ModerationManager;
 import com.cometproject.server.game.navigator.NavigatorManager;
@@ -23,6 +25,7 @@ import com.cometproject.server.game.polls.PollManager;
 import com.cometproject.server.game.quests.QuestManager;
 import com.cometproject.server.game.rooms.RoomManager;
 import com.cometproject.server.game.rooms.bundles.RoomBundleManager;
+import com.cometproject.server.game.rooms.competition.CompetitionManager;
 import com.cometproject.server.game.utilities.validator.PlayerFigureValidator;
 import com.cometproject.server.logging.LogManager;
 import com.cometproject.server.modules.ModuleManager;
@@ -39,13 +42,18 @@ import java.util.Map;
 public class CometServer {
     private final Logger log = Logger.getLogger(CometServer.class.getName());
 
-    public static final String CLIENT_VERSION = "PRODUCTION-201702211601-24705679";
+    public static final String CLIENT_VERSION = "PRODUCTION-201711211204-412329988";
+
+    /**
+     * Comet's configuration
+     */
+    private Configuration config;
 
     public CometServer(Map<String, String> overridenConfig) {
-        Configuration.setConfiguration(new Configuration("./config/comet.properties"));
+        this.config = new Configuration("./config/comet.properties");
 
         if (overridenConfig != null) {
-            Configuration.currentConfig().override(overridenConfig);
+            this.config.override(overridenConfig);
         }
     }
 
@@ -80,12 +88,15 @@ public class CometServer {
         ModerationManager.getInstance().initialize();
         PetManager.getInstance().initialize();
         LandingManager.getInstance().initialize();
-        PlayerManager.getInstance().initialize();
         GroupManager.getInstance().initialize();
+        PlayerManager.getInstance().initialize();
         QuestManager.getInstance().initialize();
         AchievementManager.getInstance().initialize();
         PollManager.getInstance().initialize();
-        GuideManager.getInstance().initialize();
+        RecycleManager.getInstance().initialize();
+        GameCenterManager.getInstance().initialize();
+        MarketplaceManager.getInstance().initialize();
+        CompetitionManager.getInstance().initialize();
 
         PlayerDataStorageQueue.getInstance().initialize();
         ItemStorageQueue.getInstance().initialize();
@@ -112,7 +123,7 @@ public class CometServer {
      * @return Comet configuration
      */
     public Configuration getConfig() {
-        return Configuration.currentConfig();
+        return this.config;
     }
 
     public Logger getLogger() {

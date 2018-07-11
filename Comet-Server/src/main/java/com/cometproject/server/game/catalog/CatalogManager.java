@@ -5,8 +5,9 @@ import com.cometproject.server.game.catalog.types.CatalogFrontPageEntry;
 import com.cometproject.server.game.catalog.types.CatalogItem;
 import com.cometproject.server.game.catalog.types.CatalogOffer;
 import com.cometproject.server.game.catalog.types.CatalogPage;
+import com.cometproject.server.game.nuxs.NuxGift;
 import com.cometproject.server.storage.queries.catalog.CatalogDao;
-import com.cometproject.server.utilities.Initialisable;
+import com.cometproject.server.utilities.Initializable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.collections4.map.ListOrderedMap;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 
-public class CatalogManager implements Initialisable {
+public class CatalogManager implements Initializable {
     private static CatalogManager catalogManagerInstance;
 
     /**
@@ -56,8 +57,6 @@ public class CatalogManager implements Initialisable {
      */
     private final List<CatalogFrontPageEntry> frontPageEntries = new ArrayList<>();
 
-
-
     /**
      * The handler of everything catalog-purchase related
      */
@@ -86,6 +85,8 @@ public class CatalogManager implements Initialisable {
 
         this.loadItemsAndPages();
         this.loadGiftBoxes();
+        this.loadNuxGifts();
+
 
         log.info("CatalogManager initialized");
     }
@@ -157,16 +158,44 @@ public class CatalogManager implements Initialisable {
      * @param rank Player rank
      * @return A list of pages that are accessible by the specified rank
      */
-    public List<CatalogPage> getPagesForRank(int rank) {
+    public List<CatalogPage> getPagesForRank(int rank, boolean isVip) {
         List<CatalogPage> pages = new ArrayList<>();
 
         for (CatalogPage page : this.getPages().values()) {
             if (rank >= page.getMinRank()) {
                 pages.add(page);
             }
+
+            if(page.isVipOnly() && !isVip) {
+                pages.remove(page);
+            }
         }
 
         return pages;
+    }
+
+    private List<NuxGift> nuxGiftsData = new ArrayList<>();
+
+    public List<NuxGift> getNuxGifts() { return this.nuxGiftsData; }
+    public List<NuxGift> getNuxGiftsSelectionView(int type) {
+        List<NuxGift> nuxTypeGifts = new ArrayList<>();
+
+        for(NuxGift nuxGift : this.nuxGiftsData){
+            if(nuxGift.getPageType() == type){
+                nuxTypeGifts.add(nuxGift);
+            }
+        }
+
+
+        return nuxTypeGifts;
+    }
+
+    public void loadNuxGifts() {
+        if(this.nuxGiftsData != null) {
+            this.nuxGiftsData.clear();
+        }
+
+        this.nuxGiftsData = CatalogDao.getNuxGiftsSelectionView();
     }
 
     public CatalogItem getCatalogItemByOfferId(int offerId) {
@@ -222,16 +251,6 @@ public class CatalogManager implements Initialisable {
         }
 
         return null;
-    }
-
-    /**
-     * Get a catalog item by its ID
-     *
-     * @param catalogItemId The ID of the catalog item
-     * @return CatalogItem object with specified ID
-     */
-    public CatalogItem getCatalogItem(final int catalogItemId) {
-        return this.items.get(catalogItemId);
     }
 
     /**

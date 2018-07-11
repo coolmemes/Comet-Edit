@@ -30,8 +30,8 @@ public class PetEntity extends RoomEntity {
     }
 
     @Override
-    public boolean joinRoom(Room room, String password) {
-        return true;
+    public void joinRoom(Room room, String password) {
+
     }
 
     @Override
@@ -47,25 +47,6 @@ public class PetEntity extends RoomEntity {
     public void leaveRoom(boolean save) {
         if (save) {
             PetDao.savePosition(this.getPosition().getX(), this.getPosition().getY(), this.data.getId());
-        }
-
-        if (this.getMountedEntity() != null) {
-            final RoomEntity entity = this.getMountedEntity();
-            entity.getMountedEntity().setHasMount(false);
-
-            this.setMountedEntity(null);
-
-            entity.getPosition().setZ(entity.getTile().getWalkHeight());
-
-            entity.updateVisibility(false);
-            entity.updateVisibility(true);
-
-            entity.markNeedsUpdate();
-            //entity.moveTo(entity.getPosition().squareInFront(entity.getBodyRotation()));
-
-            entity.setMountedEntity(null);
-            entity.setHasMount(false);
-            entity.applyEffect(null);
         }
 
         this.getRoom().getEntities().removeEntity(this);
@@ -135,7 +116,7 @@ public class PetEntity extends RoomEntity {
         msg.writeInt(this.data.getRaceId());
 
         msg.writeInt(this.data.getOwnerId());
-        msg.writeString(this.data.getOwnerName());
+        msg.writeString("Leon"); // TODO: this :P
         msg.writeInt(1);
         msg.writeBoolean(true); // has saddle
         msg.writeBoolean(this.hasMount()); // has rider?

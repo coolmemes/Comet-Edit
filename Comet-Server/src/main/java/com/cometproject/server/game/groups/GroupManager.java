@@ -1,26 +1,18 @@
 package com.cometproject.server.game.groups;
 
-import com.cometproject.server.game.groups.cache.GroupCacheEventListener;
 import com.cometproject.server.game.groups.items.GroupItemManager;
 import com.cometproject.server.game.groups.types.Group;
 import com.cometproject.server.game.groups.types.GroupData;
-import com.cometproject.server.game.players.PlayerManager;
 import com.cometproject.server.storage.queries.groups.GroupDao;
-import com.cometproject.server.utilities.Initialisable;
-import net.sf.ehcache.*;
-import net.sf.ehcache.event.CacheEventListener;
-import net.sf.ehcache.extension.CacheExtension;
+import com.cometproject.server.utilities.Initializable;
 import org.apache.log4j.Logger;
 import org.apache.solr.util.ConcurrentLRUCache;
 
-import javax.swing.text.AbstractDocument;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-public class GroupManager implements Initialisable {
+public class GroupManager implements Initializable {
     /**
      * The global GroupManager instance
      */
@@ -30,30 +22,42 @@ public class GroupManager implements Initialisable {
      * The amount of group instances allowed in the cache, when this
      * is reached, the group cache will remove the oldest entries
      */
-    private static final int INSTANCE_LRU_MAX_ENTRIES = 5000;
+    private static final int INSTANCE_LRU_MAX_ENTRIES = 500;
 
     /**
      * When the max entries is reached, the cache will remove old entries
      * until the count reaches this number
      */
-    private static final int INSTANCE_LRU_LOWER_WATERMARK = 3000;
+    private static final int INSTANCE_LRU_LOWER_WATERMARK = 100;
 
     /**
      * The amount of group data instances allowed in the cache, when this
      * is reached, the group data cache will remove the oldest entries
      */
-    private static final int DATA_LRU_MAX_ENTRIES = 10000;
+    private static final int DATA_LRU_MAX_ENTRIES = 650;
 
     /**
      * When the max entries is reached, the cache will remove old entries
      * until the count reaches this number
      */
-    private static final int DATA_LRU_LOWER_WATERMARK = 6000;
+    private static final int DATA_LRU_LOWER_WATERMARK = 100;
 
     /**
      * The manager of the group items (for badges and colours)
      */
     private GroupItemManager groupItems;
+
+    /**
+     * The cache which stores all group data. This cache follows the
+     * LRU design
+     */
+    private ConcurrentLRUCache<Integer, GroupData> groupData;
+
+    /**
+     * The cache which stores all group instances. This cache
+     * follows the LRU design
+     */
+    private ConcurrentLRUCache<Integer, Group> groupInstances;
 
     /**
      * Stores room ID by group ID, so we can retrieve groups faster
@@ -64,9 +68,6 @@ public class GroupManager implements Initialisable {
      * Used for logging
      */
     private Logger log = Logger.getLogger(GroupManager.class.getName());
-
-    private Cache groupDataCache;
-    private Cache groupInstanceCache;
 
     public GroupManager() {
 
@@ -79,16 +80,12 @@ public class GroupManager implements Initialisable {
     public void initialize() {
         this.groupItems = new GroupItemManager();
 
-        final int oneDay = 24 * 60 * 60;
+        this.groupData = new ConcurrentLRUCache<>(DATA_LRU_MAX_ENTRIES, DATA_LRU_LOWER_WATERMARK);
 
-        this.groupDataCache = new Cache("groupDataCache", 1000, false, false, oneDay, oneDay);
-        this.groupInstanceCache = new Cache("groupInstanceCache", 1000, false, false, oneDay, oneDay);
-
-        this.groupInstanceCache.getCacheEventNotificationService().registerListener(new GroupCacheEventListener());
-
-        // TODO: Move the cache manager away from player manager.
-        PlayerManager.getInstance().getCacheManager().addCache(this.groupDataCache);
-        PlayerManager.getInstance().getCacheManager().addCache(this.groupInstanceCache);
+        this.groupInstances = new ConcurrentLRUCache<>(INSTANCE_LRU_MAX_ENTRIES, INSTANCE_LRU_LOWER_WATERMARK,
+                (int) Math.floor((double) ((INSTANCE_LRU_LOWER_WATERMARK + INSTANCE_LRU_MAX_ENTRIES) / 2)),
+                (int) Math.ceil(0.75D * (double) INSTANCE_LRU_MAX_ENTRIES), false, false,
+                (key, value) -> value.dispose());
 
         this.roomIdToGroupId = new ConcurrentHashMap<>();
         log.info("GroupManager initialized");
@@ -110,16 +107,13 @@ public class GroupManager implements Initialisable {
      * @return Group data instance
      */
     public GroupData getData(int id) {
-        if (this.groupDataCache.get(id) != null)
-            return ((GroupData) this.groupDataCache.get(id).getObjectValue());
+        if (this.groupData.get(id) != null)
+            return this.groupData.get(id);
 
         GroupData groupData = GroupDao.getDataById(id);
 
-        if (groupData != null) {
-            final Element element = new Element(id, groupData);
-
-            this.groupDataCache.put(element);
-        }
+        if (groupData != null)
+            this.groupData.put(id, groupData);
 
         return groupData;
     }
@@ -136,17 +130,10 @@ public class GroupManager implements Initialisable {
             return null;
         }
 
-        if(this.groupInstanceCache.get(id) != null) {
-            Group group = ((Group) this.groupInstanceCache.get(id).getObjectValue());
+        Group groupInstance = this.groupInstances.get(id);
 
-            if(group.getData() != null) {
-                return group;
-            } else {
-                this.groupInstanceCache.remove(id);
-            }
-        }
-
-        Group groupInstance = null;
+        if (groupInstance != null)
+            return groupInstance;
 
         if (this.getData(id) == null) {
             return null;
@@ -154,7 +141,7 @@ public class GroupManager implements Initialisable {
 
         groupInstance = this.load(id);
 
-        this.groupInstanceCache.put(new Element(id, groupInstance));
+        this.groupInstances.put(id, groupInstance);
 
         log.trace("Group with id #" + id + " was loaded");
 
@@ -171,10 +158,10 @@ public class GroupManager implements Initialisable {
         int groupId = GroupDao.create(groupData);
 
         groupData.setId(groupId);
-        this.groupDataCache.put(new Element(groupId, groupData));
+        this.groupData.put(groupId, groupData);
 
         Group groupInstance = new Group(groupId);
-        this.groupInstanceCache.put(new Element(groupId, groupInstance));
+        this.groupInstances.put(groupId, groupInstance);
 
         return groupInstance;
     }
@@ -213,8 +200,8 @@ public class GroupManager implements Initialisable {
             this.roomIdToGroupId.remove(group.getData().getRoomId());
         }
 
-        this.groupInstanceCache.remove(id);
-        this.groupDataCache.remove(id);
+        this.groupInstances.remove(id);
+        this.groupData.remove(id);
 
         group.getMembershipComponent().dispose();
         GroupDao.deleteGroup(group.getId());
@@ -237,6 +224,24 @@ public class GroupManager implements Initialisable {
      */
     public GroupItemManager getGroupItems() {
         return groupItems;
+    }
+
+    /**
+     * Gets the group instance cache
+     *
+     * @return Group cache
+     */
+    public ConcurrentLRUCache<Integer, Group> getGroupInstances() {
+        return groupInstances;
+    }
+
+    /**
+     * Gets the group data cache
+     *
+     * @return GroupData cache
+     */
+    public ConcurrentLRUCache<Integer, GroupData> getGroupData() {
+        return groupData;
     }
 
     /**

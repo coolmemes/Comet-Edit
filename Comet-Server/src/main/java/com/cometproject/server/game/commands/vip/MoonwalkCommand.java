@@ -28,11 +28,6 @@ public class MoonwalkCommand extends ChatCommand {
     public String getPermission() {
         return "moonwalk_command";
     }
-    
-    @Override
-    public String getParameter() {
-        return "";
-    }
 
     @Override
     public String getDescription() {

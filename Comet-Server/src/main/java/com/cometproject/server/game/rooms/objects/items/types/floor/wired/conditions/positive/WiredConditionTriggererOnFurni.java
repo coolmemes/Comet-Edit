@@ -20,8 +20,8 @@ public class WiredConditionTriggererOnFurni extends WiredConditionItem {
      * @param rotation The orientation of the item
      * @param data     The JSON object associated with this item
      */
-    public WiredConditionTriggererOnFurni(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public WiredConditionTriggererOnFurni(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
@@ -31,12 +31,12 @@ public class WiredConditionTriggererOnFurni extends WiredConditionItem {
         boolean isOnFurni = false;
 
         for (long itemId : this.getWiredData().getSelectedIds()) {
-            for (RoomItemFloor itemOnEntity : entity.getRoom().getItems().getItemsOnSquare(entity.getPosition().getX(), entity.getPosition().getY())) {
-                if (itemOnEntity.getId() == itemId) isOnFurni = true;
-            }
+            RoomItemFloor itemFloor = this.getRoom().getItems().getFloorItem(itemId);
+
+            if(itemFloor != null && itemFloor.getEntitiesOnItem().contains(entity)) isOnFurni = true;
         }
 
-        return isNegative ? !isOnFurni : isOnFurni;
+        return !this.isNegative && isOnFurni || this.isNegative && !isOnFurni;
     }
 
 

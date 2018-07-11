@@ -12,6 +12,10 @@ public interface IPlayerData {
 
     void increasePoints(int points);
 
+    void increaseSeasonalPoints(int amount);
+
+    void decreaseSeasonalPoints(int amount);
+
     void increaseActivityPoints(int points);
 
     void decreaseActivityPoints(int points);

@@ -36,7 +36,7 @@ public class AchievementsListMessageComposer extends MessageComposer {
             msg.writeInt(entry.getValue().getId());
             msg.writeInt(achievement == null ? 0 : achievement.getLevel());
             msg.writeString(achievement == null ? "" : entry.getKey().getGroupName() + achievement.getLevel());
-            msg.writeInt(achievement == null ? 0 : achievement.getLevel() == 1 ? 0 : entry.getValue().getAchievement(achievement.getLevel() - 1).getProgressNeeded());
+            msg.writeInt(1);
             msg.writeInt(achievement == null ? 0 : achievement.getProgressNeeded());
             msg.writeInt(achievement == null ? 0 : achievement.getRewardActivityPoints());
             msg.writeInt(0);

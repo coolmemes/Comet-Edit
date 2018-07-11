@@ -39,9 +39,14 @@ public class CatalogItem {
     private int costActivityPoints;
 
     /**
-     * The seasonal currency cost of the items (usually diamonds)
+     * The seasonal old currency cost of the items (usually diamonds)
      */
     private int costOther;
+
+    /**
+     * The seasonal real currency cost of the items (usually diamonds)
+     */
+    private int costSeasonal;
 
     /**
      * The amount of items you get if you purchase this
@@ -103,6 +108,7 @@ public class CatalogItem {
                 data.getInt("cost_credits"),
                 data.getInt("cost_pixels"),
                 data.getInt("cost_snow"),
+                data.getInt("cost_seasonal"),
                 data.getInt("amount"),
                 data.getString("vip").equals("1"),
                 data.getInt("limited_stack"),
@@ -113,17 +119,18 @@ public class CatalogItem {
                 data.getInt("page_id"));
     }
 
-    public CatalogItem(int id, String itemId, String displayName, int costCredits, int costActivityPoints, int costOther, int amount, boolean vip, int limitedTotal, int limitedSells, boolean allowOffer, String badgeId, String presetData, int pageId) {
-        this(id, itemId, null, displayName, costCredits, costActivityPoints, costOther, amount, vip, limitedTotal, limitedSells, allowOffer, badgeId, presetData, pageId);
+    public CatalogItem(int id, String itemId, String displayName, int costCredits, int costActivityPoints, int costOther, int costSeasonal, int amount, boolean vip, int limitedTotal, int limitedSells, boolean allowOffer, String badgeId, String presetData, int pageId) {
+        this(id, itemId, null, displayName, costCredits, costActivityPoints, costOther, costSeasonal, amount, vip, limitedTotal, limitedSells, allowOffer, badgeId, presetData, pageId);
     }
 
-    public CatalogItem(int id, String itemId, List<CatalogBundledItem> bundledItems, String displayName, int costCredits, int costActivityPoints, int costOther, int amount, boolean vip, int limitedTotal, int limitedSells, boolean allowOffer, String badgeId, String presetData, int pageId) {
+    public CatalogItem(int id, String itemId, List<CatalogBundledItem> bundledItems, String displayName, int costCredits, int costActivityPoints, int costOther, int costSeasonal, int amount, boolean vip, int limitedTotal, int limitedSells, boolean allowOffer, String badgeId, String presetData, int pageId) {
         this.id = id;
         this.itemId = itemId;
         this.displayName = displayName;
         this.costCredits = costCredits;
         this.costActivityPoints = costActivityPoints;
         this.costOther = costOther;
+        this.costSeasonal = costSeasonal;
         this.amount = amount;
         this.vip = vip;
         this.limitedTotal = limitedTotal;
@@ -204,11 +211,15 @@ public class CatalogItem {
         msg.writeString(this.getDisplayName());
         msg.writeBoolean(false);
 
-        msg.writeInt(this.getCostCredits());
+
+        msg.writeInt(this.costCredits);
 
         if (this.getCostOther() > 0) {
             msg.writeInt(this.getCostOther());
             msg.writeInt(105);
+        } else if (this.getCostSeasonal() > 0) {
+                msg.writeInt(this.getCostSeasonal());
+                msg.writeInt(103);
         } else if (this.getCostActivityPoints() > 0) {
             msg.writeInt(this.getCostActivityPoints());
             msg.writeInt(0);
@@ -251,10 +262,41 @@ public class CatalogItem {
             }
         }
 
-        msg.writeInt(0); // club level
+        msg.writeInt(vip ? 1 : 0); // club level
         msg.writeBoolean(!(this.getLimitedTotal() > 0) && this.allowOffer());
+        msg.writeBoolean(true);
+        msg.writeString("");
+    }
+
+    public void composeClubPresents(IComposer msg) {
+        final ItemDefinition firstItem = this.itemId.equals("-1") ? null : ItemManager.getInstance().getDefinition(this.getItems().get(0).getItemId());
+        msg.writeInt(firstItem.getSpriteId());
+        msg.writeString(firstItem.getItemName());
+        msg.writeBoolean(false);
+        msg.writeInt(0);
+        msg.writeInt(0);
+        msg.writeInt(0);
+        msg.writeBoolean(false);
+        msg.writeInt(1);
+
+        msg.writeString(firstItem.getType());
+        msg.writeInt(firstItem.getSpriteId());
+        msg.writeString("");
+        msg.writeInt(1);
+        msg.writeBoolean(false);
+
+        msg.writeInt(0); // club level
+        msg.writeBoolean(false);
         msg.writeBoolean(false);
         msg.writeString("");
+    }
+
+    public void serializeAvailability(IComposer msg) {
+        final ItemDefinition firstItem = this.itemId.equals("-1") ? null : ItemManager.getInstance().getDefinition(this.getItems().get(0).getItemId());
+        msg.writeInt(firstItem.getSpriteId());
+        msg.writeBoolean(true);
+        msg.writeInt(-100);
+        msg.writeBoolean(true);
     }
 
     public int getId() {
@@ -284,6 +326,8 @@ public class CatalogItem {
     public int getCostOther() {
         return costOther;
     }
+
+    public int getCostSeasonal() { return costSeasonal; }
 
     public int getAmount() {
         return amount;

@@ -3,6 +3,7 @@ package com.cometproject.server.game.commands.staff.rewards;
 import com.cometproject.server.config.Locale;
 import com.cometproject.server.game.commands.ChatCommand;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
+import com.cometproject.server.network.messages.outgoing.user.newyearresolution.NewYearResolutionCompletedMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 
 public class RoomBadgeCommand extends ChatCommand {
@@ -22,11 +23,6 @@ public class RoomBadgeCommand extends ChatCommand {
     @Override
     public String getPermission() {
         return "roombadge_command";
-    }
-    
-    @Override
-    public String getParameter() {
-        return Locale.getOrDefault("command.parameter.badge", "%badge%");
     }
 
     @Override

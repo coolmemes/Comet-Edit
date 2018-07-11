@@ -1,6 +1,10 @@
 package com.cometproject.server.network.messages.incoming.room.action;
 
+import com.cometproject.server.game.rooms.objects.entities.RoomEntity;
 import com.cometproject.server.game.rooms.objects.entities.types.PlayerEntity;
+import com.cometproject.server.game.rooms.objects.misc.Position;
+import com.cometproject.server.game.rooms.types.components.games.RoomGame;
+import com.cometproject.server.game.rooms.types.components.games.survival.types.SurvivalPlayer;
 import com.cometproject.server.network.messages.incoming.Event;
 import com.cometproject.server.network.messages.outgoing.user.profile.UserBadgesMessageComposer;
 import com.cometproject.server.protocol.messages.MessageEvent;
@@ -10,10 +14,6 @@ import com.cometproject.server.network.sessions.Session;
 public class UserBadgesMessageEvent implements Event {
     public void handle(Session client, MessageEvent msg) {
         int userId = msg.readInt();
-
-        if (client.getPlayer() == null || client.getPlayer().getInventory() == null) {
-            return;
-        }
 
         if (client.getPlayer().getId() == userId) {
             client.send(new UserBadgesMessageComposer(client.getPlayer().getId(), client.getPlayer().getInventory().equippedBadges()));

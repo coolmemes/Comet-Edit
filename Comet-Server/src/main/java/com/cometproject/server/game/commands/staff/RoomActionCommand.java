@@ -13,6 +13,7 @@ import com.cometproject.server.game.rooms.objects.misc.Position;
 import com.cometproject.server.network.messages.outgoing.room.avatar.AvatarsMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.DanceMessageComposer;
 import com.cometproject.server.network.messages.outgoing.room.avatar.TalkMessageComposer;
+import com.cometproject.server.network.messages.outgoing.room.engine.RoomActionMessageComposer;
 import com.cometproject.server.network.sessions.Session;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringUtils;
@@ -43,10 +44,13 @@ public class RoomActionCommand extends ChatCommand {
                 break;
 
             case "say":
-                String msg = this.merge(params, 1);
+                String msg = this.merge(params, 1); //why " "?
+                msg = msg.substring(0, msg.length()-1);
 
                 for (PlayerEntity playerEntity : client.getPlayer().getEntity().getRoom().getEntities().getPlayerEntities()) {
-                    playerEntity.getRoom().getEntities().broadcastMessage(new TalkMessageComposer(playerEntity.getId(), msg, RoomManager.getInstance().getEmotions().getEmotion(msg), 0));
+                    if (playerEntity.onChat(msg)) {
+                        playerEntity.getRoom().getEntities().broadcastMessage(new TalkMessageComposer(playerEntity.getId(), msg, RoomManager.getInstance().getEmotions().getEmotion(msg), 0));
+                    }
                 }
                 break;
 
@@ -111,17 +115,28 @@ public class RoomActionCommand extends ChatCommand {
                 }
 
                 break;
+
+            case "disco":
+                client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(new RoomActionMessageComposer(3));
+                break;
+
+            case "shake":
+                client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(new RoomActionMessageComposer(1));
+                break;
+
+            case "rotate":
+                client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(new RoomActionMessageComposer(0));
+                break;
+
+            case "wtf":
+                client.getPlayer().getEntity().getRoom().getEntities().broadcastMessage(new RoomActionMessageComposer(2));
+                break;
         }
     }
 
     @Override
     public String getPermission() {
         return "roomaction_command";
-    }
-    
-    @Override
-    public String getParameter() {
-        return "";
     }
 
     @Override

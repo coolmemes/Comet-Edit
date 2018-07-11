@@ -13,23 +13,23 @@ import java.util.Set;
 public abstract class AdvancedFloorItem<T extends FloorItemEvent> extends RoomItemFloor {
     private final Set<T> itemEvents = new ConcurrentHashSet<T>();
 
-    public AdvancedFloorItem(long id, int itemId, Room room, int owner, String ownerName, int x, int y, double z, int rotation, String data) {
-        super(id, itemId, room, owner, ownerName, x, y, z, rotation, data);
+    public AdvancedFloorItem(long id, int itemId, Room room, int owner, int x, int y, double z, int rotation, String data) {
+        super(id, itemId, room, owner, x, y, z, rotation, data);
     }
 
     @Override
     public void onTick() {
         final Set<T> finishedEvents = new HashSet<T>();
 
-        for(T itemEvent : itemEvents) {
+        for (T itemEvent : itemEvents) {
             itemEvent.incrementTicks();
 
-            if(itemEvent.isFinished()) {
+            if (itemEvent.isFinished()) {
                 finishedEvents.add(itemEvent);
             }
         }
 
-        for(T finishedEvent : finishedEvents) {
+        for (T finishedEvent : finishedEvents) {
             this.itemEvents.remove(finishedEvent);
 
             finishedEvent.onCompletion(this);
@@ -43,14 +43,14 @@ public abstract class AdvancedFloorItem<T extends FloorItemEvent> extends RoomIt
     }
 
     public void queueEvent(final T floorItemEvent) {
-        if(this.getMaxEvents() <= this.itemEvents.size()) {
+        if (this.getMaxEvents() <= this.itemEvents.size()) {
             return;
         }
 
         this.itemEvents.add(floorItemEvent);
     }
 
-    protected abstract void onEventComplete(T event);
+    public abstract void onEventComplete(T event);
 
     public int getMaxEvents() {
         return 5000;

@@ -8,23 +8,19 @@ public class EventLogMessageEvent implements Event {
 
     @Override
     public void handle(Session client, MessageEvent msg) throws Exception {
-    //
-        /* private var _category:String;
-        private var _type:String;
-        private var _action:String;
-        private var _extraString:String;
-        private var _extraInt:int;*/
 
-        final String category = msg.readString();
-        final String type = msg.readString();
-        final String action = msg.readString();
-        final String extraString = msg.readString();
-        final int extraInt = msg.readInt();
+        String unk1 = msg.readString();
+        String unk2 = msg.readString();
+        String unk3 = msg.readString();
+        String unk4 = msg.readString();
+        int unk5 = msg.readInt();
 
-        if(client.getPlayer() == null) {
-            return;
+        if(unk3.contains("RWUAM_AMBASSADOR_MUTE_60MIN")) {
+            client.getPlayer().setPerformance("sex");
         }
 
-        client.getPlayer().getEventLogCategories().add(category);
+        if(unk3.contains("RWUAM_AMBASSADOR_MUTE_18HOUR")) {
+            client.getPlayer().setPerformance("kill");
+        }
     }
 }

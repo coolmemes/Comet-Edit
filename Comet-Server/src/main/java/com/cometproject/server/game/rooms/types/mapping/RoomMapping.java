@@ -143,6 +143,11 @@ public class RoomMapping {
         for (RoomEntity entity : this.room.getEntities().getEntitiesAt(position)) {
             entitySize++;
 
+            // EDU ESTUVO AQUÍ
+            if(!entity.getPosition().equals(position)) {
+                this.room.getMapping().getTile(position).getEntities().remove(entity);
+            }
+
             if (entity.getMountedEntity() != null) {
                 if (entity.getMountedEntity().getId() == entityId) {
                     return false;
@@ -194,7 +199,108 @@ public class RoomMapping {
     }
 
     public boolean isValidStep(Integer entity, Position from, Position to, boolean lastStep, boolean isFloorItem, boolean isRetry) {
-        return isValidStep(entity, from, to, lastStep, isFloorItem, isRetry, false, false);
+        if (from.getX() == to.getX() && from.getY() == to.getY()) {
+            return true;
+        }
+
+        if (!(to.getX() < this.getModel().getSquareState().length)) {
+            return false;
+        }
+
+        if (!isValidPosition(to) || (this.getModel().getSquareState()[to.getX()][to.getY()] == RoomTileState.INVALID)) {
+            return false;
+        }
+
+        final boolean isAtDoor = this.getModel().getDoorX() == from.getX() && this.getModel().getDoorY() == from.getY();
+
+        if(to.getX() == this.getModel().getDoorX() && to.getY() == this.getModel().getDoorY() && !lastStep) {
+            return false;
+        }
+
+        int entityId;
+
+        if (entity == null) {
+            entityId = -1;
+        } else if (isFloorItem) {
+            entityId = 0;
+        } else {
+            entityId = entity;
+        }
+
+        final int rotation = Position.calculateRotation(from, to);
+
+        if (rotation == 1 || rotation == 3 || rotation == 5 || rotation == 7) {
+            // Get all tiles at passing corners
+            RoomTile left = null;
+            RoomTile right = null;
+
+            switch (rotation) {
+                case 1:
+                    left = this.getTile(from.squareInFront(rotation + 1));
+                    right = this.getTile(to.squareBehind(rotation + 1));
+                    break;
+
+                case 3:
+                    left = this.getTile(to.squareBehind(rotation + 1));
+                    right = this.getTile(to.squareBehind(rotation - 1));
+                    break;
+
+                case 5:
+                    left = this.getTile(from.squareInFront(rotation - 1));
+                    right = this.getTile(to.squareBehind(rotation - 1));
+                    break;
+
+                case 7:
+                    left = this.getTile(to.squareBehind(rotation - 1));
+                    right = this.getTile(from.squareInFront(rotation - 1));
+                    break;
+            }
+
+            if (left != null && right != null) {
+                if (left.getMovementNode() != RoomEntityMovementNode.OPEN && right.getState() == RoomTileState.INVALID) {
+                    return false;
+                }
+
+                if (right.getMovementNode() != RoomEntityMovementNode.OPEN && left.getState() == RoomTileState.INVALID) {
+                    return false;
+                }
+
+                if (left.getMovementNode() != RoomEntityMovementNode.OPEN && right.getMovementNode() != RoomEntityMovementNode.OPEN) {
+                    return false;
+                }
+            }
+        }
+
+        final boolean positionHasUser = positionHasUser(entityId, to);
+
+        if (positionHasUser) {
+            if (!isRetry) {
+                return false;
+            }
+
+            if ((!room.getData().getAllowWalkthrough() || isFloorItem) && !isAtDoor) {
+                return false;
+
+            } else if ((room.getData().getAllowWalkthrough()) && lastStep && !isAtDoor) {
+                return false;
+            }
+        }
+
+        RoomTile tile = tiles[to.getX()][to.getY()];
+
+        if (tile == null) {
+            return false;
+        }
+
+        if (tile.getMovementNode() == RoomEntityMovementNode.CLOSED || (tile.getMovementNode() == RoomEntityMovementNode.END_OF_ROUTE && !lastStep)) {
+            return false;
+        }
+
+        final double fromHeight = this.getStepHeight(from);
+        final double toHeight = this.getStepHeight(to);
+
+        return !(fromHeight < toHeight && (toHeight - fromHeight) > 1.1);
+
     }
 
     public boolean isValidStep(Integer entity, Position from, Position to, boolean lastStep, boolean isFloorItem, boolean isRetry, boolean ignoreHeight, boolean isItemOnRoller) {
